@@ -497,6 +497,9 @@
     } else {
       document.getElementById('auth-screen').style.display = 'flex';
       document.getElementById('app-screen').style.display = 'none';
+      if (unsub) { unsub(); unsub = null; }
+      members = {};
+      householdCurrency = '';
     }
   });
 
