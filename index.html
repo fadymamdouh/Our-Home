@@ -285,6 +285,36 @@
     flex:0 0 auto;
   }
   .item .del:hover{color:#a4462f;}
+  .claim-btn{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:11px;
+    padding:4px 10px;
+    border-radius:20px;
+    border:1px solid var(--accent);
+    background:#fff;
+    color:var(--accent);
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+  .claim-btn.claimed{background:var(--accent-soft); border-color:var(--accent-soft); color:var(--accent);}
+  .toast{
+    position:fixed;
+    bottom:24px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:#fff;
+    padding:12px 20px;
+    border-radius:8px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s, transform .25s;
+    z-index:200;
+    max-width:90%;
+    text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   .empty{
     text-align:center;
@@ -330,18 +360,18 @@
     <div class="add-row">
       <input type="text" id="new-name" placeholder="Item name">
       <select id="new-category">
-        <option>🍳 Kitchen</option>
-        <option>🛋️ Living Room</option>
-        <option>🛏️ Bedroom</option>
-        <option>🛁 Bathroom</option>
-        <option>🪑 Furniture</option>
-        <option>🔌 Appliances</option>
-        <option>🖼️ Decor</option>
-        <option>📦 Other</option>
+        <option value="kitchen">🍳 Kitchen</option>
+        <option value="living_room">🛋️ Living Room</option>
+        <option value="bedroom">🛏️ Bedroom</option>
+        <option value="bathroom">🛁 Bathroom</option>
+        <option value="furniture">🪑 Furniture</option>
+        <option value="appliances">🔌 Appliances</option>
+        <option value="decor">🖼️ Decor</option>
+        <option value="other">📦 Other</option>
       </select>
       <select id="new-priority">
-        <option value="Must-have">Must-have</option>
-        <option value="Nice-to-have">Nice-to-have</option>
+        <option value="must">Must-have</option>
+        <option value="nice">Nice-to-have</option>
       </select>
       <input type="number" id="new-price" placeholder="Price">
       <input type="number" id="new-qty" placeholder="Qty" value="1" min="1">
@@ -363,6 +393,8 @@
   <img id="lightbox-img" src="">
 </div>
 
+<div class="toast" id="toast"></div>
+
 <!-- Firebase SDKs -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -372,7 +404,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc,
-    doc, serverTimestamp, query, orderBy
+    doc, serverTimestamp, query, orderBy, getDocs, getDoc
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   // ==== FILL IN YOUR FIREBASE CONFIG (from Firebase Console > Project Settings) ====
@@ -396,6 +428,31 @@
   const CLOUDINARY_CLOUD_NAME = "kz9ilyiy";
   const CLOUDINARY_UPLOAD_PRESET = "jbltarww";
 
+  // ==== Household config ====
+  const HOUSEHOLD_ID = "fazafizo-batoot";
+
+  const CATEGORY_LABELS = {
+    kitchen: "🍳 Kitchen",
+    living_room: "🛋️ Living Room",
+    bedroom: "🛏️ Bedroom",
+    bathroom: "🛁 Bathroom",
+    furniture: "🪑 Furniture",
+    appliances: "🔌 Appliances",
+    decor: "🖼️ Decor",
+    other: "📦 Other"
+  };
+
+  let members = {};      // uid -> displayName
+  let householdCurrency = "";
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
   // ---- Auth UI (sign-in only — accounts are created in the Firebase Console) ----
   const authError = document.getElementById('auth-error');
   const submitBtn = document.getElementById('auth-submit');
@@ -417,11 +474,25 @@
 
   document.getElementById('signout').onclick = () => signOut(auth);
 
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app-screen').style.display = 'block';
-      document.getElementById('user-label').textContent = `Welcome back, ${user.email.split('@')[0]} 🦆`;
+
+      try {
+        const membersSnap = await getDocs(collection(db, 'households', HOUSEHOLD_ID, 'members'));
+        members = {};
+        membersSnap.forEach(d => { members[d.id] = d.data().displayName || 'Someone'; });
+
+        const householdSnap = await getDoc(doc(db, 'households', HOUSEHOLD_ID));
+        householdCurrency = householdSnap.exists() ? (householdSnap.data().currency || '') : '';
+
+        document.getElementById('user-label').textContent =
+          `Welcome back, ${members[user.uid] || user.email.split('@')[0]} 🦆`;
+      } catch (e) {
+        toast('Could not load household info: ' + e.message);
+      }
+
       startListener();
     } else {
       document.getElementById('auth-screen').style.display = 'flex';
@@ -430,7 +501,7 @@
   });
 
   // ---- Firestore list ----
-  const itemsRef = collection(db, 'items');
+  const itemsRef = collection(db, 'households', HOUSEHOLD_ID, 'items');
   let unsub = null;
 
   function startListener() {
@@ -452,10 +523,10 @@
 
   document.getElementById('add-btn').onclick = async () => {
     const name = document.getElementById('new-name').value.trim();
-    const category = document.getElementById('new-category').value;
+    const categoryId = document.getElementById('new-category').value;
     const priority = document.getElementById('new-priority').value;
     const price = parseFloat(document.getElementById('new-price').value) || 0;
-    const qty = parseInt(document.getElementById('new-qty').value) || 1;
+    const quantity = parseInt(document.getElementById('new-qty').value) || 1;
     const link = document.getElementById('new-link').value.trim();
     const notes = document.getElementById('new-notes').value.trim();
     const file = photoInput.files[0];
@@ -480,13 +551,18 @@
         photoURL = data.secure_url;
       }
       await addDoc(itemsRef, {
-        name, category, priority, price, qty, link, notes, photoURL,
+        name, categoryId, priority, price, quantity, link, notes, photoURL,
         status: 'needed',
-        addedBy: auth.currentUser.email.split('@')[0],
-        createdAt: serverTimestamp()
+        addedBy: auth.currentUser.uid,
+        claimedBy: null,
+        purchasedBy: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        purchasedAt: null
       });
+      toast('Added to the list');
     } catch (e) {
-      alert('Could not add item: ' + e.message);
+      toast('Could not add item: ' + e.message);
     }
 
     document.getElementById('new-name').value = '';
@@ -502,10 +578,38 @@
   };
 
   window.toggleItem = async (id, current) => {
-    await updateDoc(doc(db, 'items', id), { status: current === 'bought' ? 'needed' : 'bought' });
+    const nowBought = current !== 'bought';
+    try {
+      await updateDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', id), {
+        status: nowBought ? 'bought' : 'needed',
+        purchasedBy: nowBought ? auth.currentUser.uid : null,
+        purchasedAt: nowBought ? serverTimestamp() : null,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      toast('Could not update item: ' + e.message);
+    }
   };
-  window.deleteItem = async (id) => {
-    await deleteDoc(doc(db, 'items', id));
+  window.claimItem = async (id, current) => {
+    const uid = auth.currentUser.uid;
+    const newClaim = current === uid ? null : uid;
+    try {
+      await updateDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', id), {
+        claimedBy: newClaim,
+        updatedAt: serverTimestamp()
+      });
+    } catch (e) {
+      toast('Could not update claim: ' + e.message);
+    }
+  };
+  window.deleteItem = async (id, name) => {
+    if (!confirm(`Remove "${name}" from the list?`)) return;
+    try {
+      await deleteDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', id));
+      toast('Removed');
+    } catch (e) {
+      toast('Could not remove item: ' + e.message);
+    }
   };
   window.openLightbox = (url) => {
     document.getElementById('lightbox-img').src = url;
@@ -525,20 +629,28 @@
     }
     const byCategory = {};
     items.forEach(it => {
-      (byCategory[it.category] = byCategory[it.category] || []).push(it);
+      const cat = it.categoryId || 'other';
+      (byCategory[cat] = byCategory[cat] || []).push(it);
     });
+
+    const myUid = auth.currentUser.uid;
+    const currency = householdCurrency || '';
 
     let html = '';
     let totalAll = 0, totalBought = 0;
-    for (const cat of Object.keys(byCategory)) {
-      const list = byCategory[cat];
-      html += `<div class="category"><h2>${cat} <span class="count">${list.length}</span></h2>`;
+    for (const catId of Object.keys(byCategory)) {
+      const list = byCategory[catId];
+      const label = CATEGORY_LABELS[catId] || CATEGORY_LABELS.other;
+      html += `<div class="category"><h2>${label} <span class="count">${list.length}</span></h2>`;
       list.forEach(it => {
-        const qty = it.qty || 1;
+        const qty = it.quantity || 1;
         const lineTotal = (it.price || 0) * qty;
         totalAll += lineTotal;
         if (it.status === 'bought') totalBought += lineTotal;
-        const isMust = (it.priority || 'Must-have') === 'Must-have';
+        const isMust = (it.priority || 'must') === 'must';
+        const addedByName = members[it.addedBy] || 'Someone';
+        const claimedByName = it.claimedBy ? (members[it.claimedBy] || 'Someone') : null;
+        const isClaimedByMe = it.claimedBy === myUid;
         html += `
           <div class="item ${it.status === 'bought' ? 'bought' : ''}">
             <div class="check" onclick="toggleItem('${it.id}','${it.status}')">
@@ -551,15 +663,16 @@
               ${it.notes ? `<span class="notes">${escapeHtml(it.notes)}</span>` : ''}
             </div>
             <span class="priority-tag ${isMust ? 'must' : 'nice'}">${isMust ? 'Must' : 'Nice'}</span>
-            ${it.price ? `<div class="price">$${lineTotal.toFixed(2)}</div>` : ''}
-            <div class="by">${escapeHtml(it.addedBy || '')}</div>
-            <button class="del" onclick="deleteItem('${it.id}')">×</button>
+            ${it.price ? `<div class="price">${lineTotal.toFixed(2)} ${escapeHtml(currency)}</div>` : ''}
+            ${it.status !== 'bought' ? `<button class="claim-btn ${it.claimedBy ? 'claimed' : ''}" onclick="claimItem('${it.id}','${it.claimedBy || ''}')">${it.claimedBy ? (isClaimedByMe ? 'You got it' : claimedByName) : "I'll get it"}</button>` : ''}
+            <div class="by">${escapeHtml(addedByName)}</div>
+            <button class="del" onclick="deleteItem('${it.id}','${escapeHtml(it.name).replace(/'/g, "\\'")}')">×</button>
           </div>`;
       });
       html += `</div>`;
     }
     container.innerHTML = html;
-    totalsEl.textContent = `Bought $${totalBought.toFixed(2)} of $${totalAll.toFixed(2)} total`;
+    totalsEl.textContent = `Bought ${totalBought.toFixed(2)} of ${totalAll.toFixed(2)} ${currency} total`;
   }
 
   function escapeHtml(str) {
