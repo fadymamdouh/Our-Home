@@ -140,6 +140,50 @@
 
   main{max-width:760px; margin:0 auto; padding:24px;}
 
+  #dashboard{
+    padding-bottom:26px;
+    margin-bottom:26px;
+    border-bottom:1px solid var(--line);
+  }
+  .dash-line{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:22px;
+    color:var(--ink);
+    margin:0 0 14px;
+  }
+  .dash-bar{
+    width:100%;
+    height:6px;
+    background:var(--accent-soft);
+    border-radius:20px;
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  .dash-bar-fill{
+    height:100%;
+    background:var(--accent);
+    border-radius:20px;
+    width:0%;
+    transition:width .5s ease;
+  }
+  .dash-budget{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    color:var(--muted);
+    margin:0 0 10px;
+  }
+  .dash-budget a{color:var(--accent); text-decoration:underline; cursor:pointer;}
+  .dash-link{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--accent);
+    cursor:pointer;
+    text-decoration:none;
+  }
+  .dash-link:hover{text-decoration:underline;}
+
   .add-row{
     display:flex;
     gap:8px;
@@ -378,6 +422,13 @@
     <button id="signout">Sign out</button>
   </header>
   <main>
+    <div id="dashboard">
+      <p class="dash-line" id="dash-counts">—</p>
+      <div class="dash-bar"><div class="dash-bar-fill" id="dash-bar-fill"></div></div>
+      <p class="dash-budget" id="dash-budget">—</p>
+      <a class="dash-link" id="dash-see-all">See everything ↓</a>
+    </div>
+
     <div class="add-row">
       <input type="text" id="new-name" placeholder="Item name">
       <select id="new-category">
@@ -465,6 +516,7 @@
 
   let members = {};      // uid -> displayName
   let householdCurrency = "";
+  let householdBudget = null;
 
   function toast(msg) {
     const el = document.getElementById('toast');
@@ -506,7 +558,9 @@
         membersSnap.forEach(d => { members[d.id] = d.data().displayName || 'Someone'; });
 
         const householdSnap = await getDoc(doc(db, 'households', HOUSEHOLD_ID));
-        householdCurrency = householdSnap.exists() ? (householdSnap.data().currency || '') : '';
+        const hData = householdSnap.exists() ? householdSnap.data() : {};
+        householdCurrency = hData.currency || '';
+        householdBudget = typeof hData.budget === 'number' ? hData.budget : null;
 
         document.getElementById('user-label').textContent =
           `Welcome back, ${members[user.uid] || user.email.split('@')[0]} 🦆`;
@@ -521,6 +575,7 @@
       if (unsub) { unsub(); unsub = null; }
       members = {};
       householdCurrency = '';
+      householdBudget = null;
     }
   });
 
@@ -658,7 +713,39 @@
     return ts.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function renderDashboard(items) {
+    const total = items.length;
+    const bought = items.filter(it => it.status === 'bought').length;
+    document.getElementById('dash-counts').textContent =
+      total === 0 ? "Nothing planned yet" : `${total} thing${total === 1 ? '' : 's'} planned · ${bought} already bought`;
+
+    const currency = householdCurrency || '';
+    const purchasedAmount = items.reduce((sum, it) => {
+      if (it.status !== 'bought') return sum;
+      return sum + (it.price || 0) * (it.quantity || 1);
+    }, 0);
+
+    const budgetEl = document.getElementById('dash-budget');
+    const fillEl = document.getElementById('dash-bar-fill');
+
+    if (householdBudget && householdBudget > 0) {
+      const remaining = householdBudget - purchasedAmount;
+      const pct = Math.min(100, (purchasedAmount / householdBudget) * 100);
+      fillEl.style.width = pct + '%';
+      budgetEl.textContent =
+        `${purchasedAmount.toFixed(0)} ${currency} spent · ${remaining.toFixed(0)} ${currency} remaining of ${householdBudget.toFixed(0)} ${currency}`;
+    } else {
+      fillEl.style.width = total === 0 ? '0%' : `${Math.min(100, (bought / total) * 100)}%`;
+      budgetEl.innerHTML = `${purchasedAmount.toFixed(0)} ${currency} spent so far — set a budget in Firestore to track it here`;
+    }
+  }
+
+  document.getElementById('dash-see-all').onclick = () => {
+    document.getElementById('list-container').scrollIntoView({ behavior: 'smooth' });
+  };
+
   function render(items) {
+    renderDashboard(items);
     const container = document.getElementById('list-container');
     const totalsEl = document.getElementById('totals');
     if (items.length === 0) {
