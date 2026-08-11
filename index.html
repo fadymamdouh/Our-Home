@@ -184,35 +184,92 @@
   }
   .dash-link:hover{text-decoration:underline;}
 
-  .add-row{
-    display:flex;
-    gap:8px;
-    margin-bottom:28px;
-    flex-wrap:wrap;
+  #fab{
+    position:fixed;
+    right:22px; bottom:22px;
+    width:52px; height:52px;
+    border-radius:50%;
+    background:var(--accent);
+    color:#fff;
+    font-size:26px;
+    line-height:1;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 8px 24px -6px rgba(142,59,77,.45);
+    z-index:150;
   }
-  .add-row input[type=text]{margin:0; flex:2; min-width:140px;}
-  .add-row select{
+  #fab.visible{display:flex;}
+  #fab:hover{background:#7a2f40;}
+
+  .sheet-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(58,31,36,.4);
+    z-index:160;
+  }
+  .sheet-overlay.open{display:block;}
+
+  .sheet{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    max-width:520px;
+    margin:0 auto;
+    background:var(--card);
+    border-radius:18px 18px 0 0;
+    padding:14px 24px 28px;
+    box-shadow:0 -10px 40px -10px rgba(58,31,36,.3);
+    transform:translateY(110%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+    z-index:170;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .sheet.open{transform:translateY(0);}
+  .sheet-handle{
+    width:36px; height:4px;
+    background:var(--line);
+    border-radius:4px;
+    margin:0 auto 14px;
+  }
+  .sheet-title{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:24px;
+    color:var(--accent);
+    margin:0 0 2px;
+  }
+  .sheet-meta{
+    font-size:12px;
+    color:var(--muted);
+    margin:0 0 16px;
+  }
+  .sheet input, .sheet select{margin-bottom:10px;}
+  .sheet-row{display:flex; gap:8px;}
+  .sheet-row select{
     flex:1;
-    min-width:120px;
     padding:11px 10px;
     border:1px solid var(--line);
     border-radius:7px;
     font-family:'Karla','Helvetica Neue',Arial,sans-serif;
     font-size:14px;
     background:#fffdfc;
+    margin-bottom:10px;
   }
-  .add-row input[type=number]{margin:0; flex:0 0 90px;}
-  .add-row button{
-    flex:0 0 auto;
-    padding:0 22px;
-    background:var(--accent);
-    color:#fff;
-    font-size:14px;
-    font-weight:600;
+  .sheet-more{
+    display:inline-block;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    color:var(--accent);
+    cursor:pointer;
+    text-decoration:none;
+    margin:2px 0 16px;
   }
-  .add-row button:hover{background:#7a2f40;}
+  .sheet-more:hover{text-decoration:underline;}
+  .sheet-more-fields{display:none;}
+  .sheet-more-fields.open{display:block;}
   .photo-btn{
-    flex:0 0 auto;
+    display:inline-block;
     padding:11px 16px;
     border:1px solid var(--line);
     border-radius:7px;
@@ -222,6 +279,7 @@
     cursor:pointer;
     background:#fffdfc;
     white-space:nowrap;
+    margin-bottom:10px;
   }
   .photo-btn.has-file{border-color:var(--good); color:var(--good);}
   .item .thumb{
@@ -429,36 +487,49 @@
       <a class="dash-link" id="dash-see-all">See everything ↓</a>
     </div>
 
-    <div class="add-row">
-      <input type="text" id="new-name" placeholder="Item name">
-      <select id="new-category">
-        <option value="kitchen">🍳 Kitchen</option>
-        <option value="living_room">🛋️ Living Room</option>
-        <option value="bedroom">🛏️ Bedroom</option>
-        <option value="bathroom">🛁 Bathroom</option>
-        <option value="furniture">🪑 Furniture</option>
-        <option value="appliances">🔌 Appliances</option>
-        <option value="decor">🖼️ Decor</option>
-        <option value="other">📦 Other</option>
-      </select>
-      <select id="new-priority">
-        <option value="must">Must-have</option>
-        <option value="nice">Nice-to-have</option>
-      </select>
-      <input type="number" id="new-price" placeholder="Price">
-      <input type="number" id="new-qty" placeholder="Qty" value="1" min="1">
-    </div>
-    <div class="add-row">
-      <input type="text" id="new-link" placeholder="Product link (optional)">
-      <input type="text" id="new-notes" placeholder="Notes (optional)">
-      <label class="photo-btn" for="new-photo" id="photo-label">Add photo</label>
-      <input type="file" id="new-photo" accept="image/*" style="display:none">
-      <button id="add-btn">Add item</button>
-    </div>
-
     <div id="list-container"></div>
     <div class="totals" id="totals"></div>
   </main>
+</div>
+
+<button id="fab" aria-label="Add item">+</button>
+
+<div class="sheet-overlay" id="sheet-overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <h2 class="sheet-title" id="sheet-title">Add something</h2>
+  <p class="sheet-meta utility" id="sheet-meta"></p>
+
+  <input type="text" id="item-name" placeholder="Item name">
+  <div class="sheet-row">
+    <select id="item-category">
+      <option value="kitchen">🍳 Kitchen</option>
+      <option value="living_room">🛋️ Living Room</option>
+      <option value="bedroom">🛏️ Bedroom</option>
+      <option value="bathroom">🛁 Bathroom</option>
+      <option value="furniture">🪑 Furniture</option>
+      <option value="appliances">🔌 Appliances</option>
+      <option value="decor">🖼️ Decor</option>
+      <option value="other">📦 Other</option>
+    </select>
+    <select id="item-priority">
+      <option value="must">Must-have</option>
+      <option value="nice">Nice-to-have</option>
+    </select>
+  </div>
+  <input type="number" id="item-price" placeholder="Price">
+
+  <a class="sheet-more" id="sheet-more-toggle">+ Add more details</a>
+
+  <div class="sheet-more-fields" id="sheet-more-fields">
+    <input type="number" id="item-qty" placeholder="Qty" value="1" min="1">
+    <input type="text" id="item-link" placeholder="Product link (optional)">
+    <input type="text" id="item-notes" placeholder="Notes (optional)">
+    <label class="photo-btn" for="item-photo" id="item-photo-label">Add photo</label>
+    <input type="file" id="item-photo" accept="image/*" style="display:none">
+  </div>
+
+  <button class="btn-primary" id="sheet-submit">Add item</button>
 </div>
 
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -551,6 +622,7 @@
     if (user) {
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app-screen').style.display = 'block';
+      document.getElementById('fab').classList.add('visible');
 
       try {
         const membersSnap = await getDocs(collection(db, 'households', HOUSEHOLD_ID, 'members'));
@@ -572,6 +644,7 @@
     } else {
       document.getElementById('auth-screen').style.display = 'flex';
       document.getElementById('app-screen').style.display = 'none';
+      document.getElementById('fab').classList.remove('visible');
       if (unsub) { unsub(); unsub = null; }
       members = {};
       householdCurrency = '';
@@ -593,67 +666,170 @@
     });
   }
 
-  const photoInput = document.getElementById('new-photo');
-  const photoLabel = document.getElementById('photo-label');
+  // ---- Add/Edit sheet ----
+  const fab = document.getElementById('fab');
+  const sheetOverlay = document.getElementById('sheet-overlay');
+  const sheet = document.getElementById('sheet');
+  const sheetTitle = document.getElementById('sheet-title');
+  const sheetMeta = document.getElementById('sheet-meta');
+  const sheetSubmit = document.getElementById('sheet-submit');
+  const moreToggle = document.getElementById('sheet-more-toggle');
+  const moreFields = document.getElementById('sheet-more-fields');
+
+  const nameInput = document.getElementById('item-name');
+  const categoryInput = document.getElementById('item-category');
+  const priorityInput = document.getElementById('item-priority');
+  const priceInput = document.getElementById('item-price');
+  const qtyInput = document.getElementById('item-qty');
+  const linkInput = document.getElementById('item-link');
+  const notesInput = document.getElementById('item-notes');
+  const photoInput = document.getElementById('item-photo');
+  const photoLabel = document.getElementById('item-photo-label');
+
+  let editingId = null;
+
   photoInput.onchange = () => {
     photoLabel.textContent = photoInput.files[0] ? photoInput.files[0].name.slice(0, 14) : 'Add photo';
     photoLabel.classList.toggle('has-file', !!photoInput.files[0]);
   };
 
-  document.getElementById('add-btn').onclick = async () => {
-    const name = document.getElementById('new-name').value.trim();
-    const categoryId = document.getElementById('new-category').value;
-    const priority = document.getElementById('new-priority').value;
-    const price = parseFloat(document.getElementById('new-price').value) || 0;
-    const quantity = parseInt(document.getElementById('new-qty').value) || 1;
-    const link = document.getElementById('new-link').value.trim();
-    const notes = document.getElementById('new-notes').value.trim();
-    const file = photoInput.files[0];
-    if (!name) return;
+  moreToggle.onclick = () => {
+    moreFields.classList.toggle('open');
+    moreToggle.textContent = moreFields.classList.contains('open') ? '– Less details' : '+ Add more details';
+  };
 
-    const addBtn = document.getElementById('add-btn');
-    addBtn.disabled = true;
-    addBtn.textContent = 'Adding...';
-
-    let photoURL = '';
-    try {
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-          method: 'POST',
-          body: formData
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
-        photoURL = data.secure_url;
-      }
-      await addDoc(itemsRef, {
-        name, categoryId, priority, price, quantity, link, notes, photoURL,
-        status: 'needed',
-        addedBy: auth.currentUser.uid,
-        claimedBy: null,
-        purchasedBy: null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        purchasedAt: null
-      });
-      toast('Added to the list');
-    } catch (e) {
-      toast('Could not add item: ' + e.message);
-    }
-
-    document.getElementById('new-name').value = '';
-    document.getElementById('new-price').value = '';
-    document.getElementById('new-qty').value = '1';
-    document.getElementById('new-link').value = '';
-    document.getElementById('new-notes').value = '';
+  function resetSheetFields() {
+    nameInput.value = '';
+    categoryInput.value = 'kitchen';
+    priorityInput.value = 'must';
+    priceInput.value = '';
+    qtyInput.value = '1';
+    linkInput.value = '';
+    notesInput.value = '';
     photoInput.value = '';
     photoLabel.textContent = 'Add photo';
     photoLabel.classList.remove('has-file');
-    addBtn.disabled = false;
-    addBtn.textContent = 'Add item';
+    moreFields.classList.remove('open');
+    moreToggle.textContent = '+ Add more details';
+  }
+
+  function openSheet() {
+    sheetOverlay.classList.add('open');
+    sheet.classList.add('open');
+  }
+  function hasUnsavedInput() {
+    return nameInput.value.trim() || priceInput.value || linkInput.value.trim() || notesInput.value.trim();
+  }
+  function closeSheet() {
+    if (hasUnsavedInput() && !confirm('Discard this item?')) return;
+    sheetOverlay.classList.remove('open');
+    sheet.classList.remove('open');
+    editingId = null;
+    resetSheetFields();
+  }
+
+  window.openAddSheet = () => {
+    editingId = null;
+    resetSheetFields();
+    sheetTitle.textContent = 'Add something';
+    sheetMeta.textContent = '';
+    sheetSubmit.textContent = 'Add item';
+    openSheet();
+  };
+
+  window.openEditSheet = (id, data) => {
+    editingId = id;
+    nameInput.value = data.name || '';
+    categoryInput.value = data.categoryId || 'kitchen';
+    priorityInput.value = data.priority || 'must';
+    priceInput.value = data.price || '';
+    qtyInput.value = data.quantity || 1;
+    linkInput.value = data.link || '';
+    notesInput.value = data.notes || '';
+    photoInput.value = '';
+    photoLabel.textContent = data.photoURL ? 'Photo attached — pick to replace' : 'Add photo';
+    photoLabel.classList.toggle('has-file', !!data.photoURL);
+    if (data.link || data.notes || (data.quantity && data.quantity !== 1) || data.photoURL) {
+      moreFields.classList.add('open');
+      moreToggle.textContent = '– Less details';
+    } else {
+      moreFields.classList.remove('open');
+      moreToggle.textContent = '+ Add more details';
+    }
+    sheetTitle.textContent = 'Edit item';
+    const addedByName = members[data.addedBy] || 'Someone';
+    const addedDate = formatDate(data.createdAt);
+    sheetMeta.textContent = `Added by ${addedByName}${addedDate ? ' on ' + addedDate : ''}`;
+    sheetSubmit.textContent = 'Save changes';
+    openSheet();
+  };
+
+  fab.onclick = () => window.openAddSheet();
+  sheetOverlay.onclick = closeSheet;
+
+  sheetSubmit.onclick = async () => {
+    const name = nameInput.value.trim();
+    const categoryId = categoryInput.value;
+    const priority = priorityInput.value;
+    const price = parseFloat(priceInput.value) || 0;
+    const quantity = parseInt(qtyInput.value) || 1;
+    const link = linkInput.value.trim();
+    const notes = notesInput.value.trim();
+    const file = photoInput.files[0];
+    if (!name) { toast('Give it a name first'); return; }
+
+    sheetSubmit.disabled = true;
+    sheetSubmit.textContent = editingId ? 'Saving...' : 'Adding...';
+
+    try {
+      let photoURL;
+      if (file) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+          const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
+          photoURL = data.secure_url;
+        } catch (photoErr) {
+          toast("That photo didn't upload — saving the item without it.");
+        }
+      }
+
+      if (editingId) {
+        const updateData = { name, categoryId, priority, price, quantity, link, notes, updatedAt: serverTimestamp() };
+        if (photoURL) updateData.photoURL = photoURL;
+        await updateDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', editingId), updateData);
+        toast('Saved');
+      } else {
+        await addDoc(itemsRef, {
+          name, categoryId, priority, price, quantity, link, notes,
+          photoURL: photoURL || '',
+          status: 'needed',
+          addedBy: auth.currentUser.uid,
+          claimedBy: null,
+          purchasedBy: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          purchasedAt: null
+        });
+        toast('Added to the list');
+      }
+
+      editingId = null;
+      resetSheetFields();
+      sheetOverlay.classList.remove('open');
+      sheet.classList.remove('open');
+    } catch (e) {
+      toast(editingId ? 'Could not save changes' : 'Could not add item');
+    }
+
+    sheetSubmit.disabled = false;
+    sheetSubmit.textContent = editingId ? 'Save changes' : 'Add item';
   };
 
   window.toggleItem = async (id, current) => {
@@ -744,7 +920,11 @@
     document.getElementById('list-container').scrollIntoView({ behavior: 'smooth' });
   };
 
+  window.itemsById = {};
+
   function render(items) {
+    window.itemsById = {};
+    items.forEach(it => { window.itemsById[it.id] = it; });
     renderDashboard(items);
     const container = document.getElementById('list-container');
     const totalsEl = document.getElementById('totals');
@@ -804,6 +984,7 @@
             <span class="dot">●</span> Added by ${escapeHtml(addedByName)}${addedDate ? ` on ${addedDate}` : ''}<br>
             ${it.claimedBy ? `<span class="dot">●</span> Claimed by ${escapeHtml(claimedByName)}<br>` : ''}
             ${it.status === 'bought' ? `<span class="dot">●</span> Bought by ${escapeHtml(purchasedByName)}${purchasedDate ? ` on ${purchasedDate}` : ''}` : `<span class="dot">●</span> Still needed`}
+            <br><a class="sheet-more" style="margin-top:8px;" onclick="openEditSheet('${it.id}', itemsById['${it.id}'])">Edit</a>
           </div>
           </div>`;
       });
