@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fazafizo & Batoot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=Karla:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fdf6f4;
+    --ink:#3a1f24;
+    --line:#f0d9d9;
+    --accent:#8e3b4d;
+    --accent-soft:#f7e3e6;
+    --good:#a9718a;
+    --card:#ffffff;
+    --muted:#9c7a80;
+    --gold:#c9a24b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -5%, #fbeaea 0%, transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, #fbf1e6 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Lora','Georgia',serif;
+    min-height:100vh;
+  }
+  .utility{font-family:'Karla','Helvetica Neue',Arial,sans-serif;}
+
+  #auth-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .auth-box{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    box-shadow:0 20px 60px -20px rgba(142,59,77,.25);
+    padding:44px 36px;
+    width:100%;
+    max-width:360px;
+  }
+  .auth-box h1{
+    font-family:'Cormorant Garamond',serif;
+    font-size:34px;
+    font-style:italic;
+    margin:0 0 4px;
+    font-weight:600;
+    color:var(--accent);
+  }
+  .auth-box p{
+    color:var(--muted);
+    font-size:14px;
+    margin:0 0 24px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+  }
+  input{
+    width:100%;
+    padding:11px 14px;
+    margin-bottom:12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:14px;
+    background:#fffdfc;
+    color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:7px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+  }
+  .btn-primary{
+    width:100%;
+    padding:12px;
+    background:var(--accent);
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+  .btn-primary:hover{background:#7a2f40;}
+  .auth-toggle{
+    text-align:center;
+    margin-top:14px;
+    font-size:13px;
+    color:var(--muted);
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+  }
+  .auth-toggle a{color:var(--accent); cursor:pointer; text-decoration:underline;}
+  .auth-error{
+    color:#a4462f;
+    font-size:13px;
+    margin:-4px 0 12px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    min-height:16px;
+  }
+
+  #app-screen{display:none;}
+  header{
+    padding:32px 24px 22px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    max-width:760px;
+    margin:0 auto;
+  }
+  header h1{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:32px;
+    margin:0;
+    font-weight:600;
+    color:var(--accent);
+  }
+  header .sub{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.1em;
+  }
+  #signout{
+    background:none;
+    color:var(--muted);
+    font-size:13px;
+    text-decoration:underline;
+    padding:4px;
+  }
+
+  main{max-width:760px; margin:0 auto; padding:24px;}
+
+  .add-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .add-row input[type=text]{margin:0; flex:2; min-width:140px;}
+  .add-row select{
+    flex:1;
+    min-width:120px;
+    padding:11px 10px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:14px;
+    background:#fffdfc;
+  }
+  .add-row input[type=number]{margin:0; flex:0 0 90px;}
+  .add-row button{
+    flex:0 0 auto;
+    padding:0 22px;
+    background:var(--accent);
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+  }
+  .add-row button:hover{background:#7a2f40;}
+  .photo-btn{
+    flex:0 0 auto;
+    padding:11px 16px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    color:var(--accent);
+    cursor:pointer;
+    background:#fffdfc;
+    white-space:nowrap;
+  }
+  .photo-btn.has-file{border-color:var(--good); color:var(--good);}
+  .item .thumb{
+    width:42px; height:42px;
+    border-radius:7px;
+    object-fit:cover;
+    flex:0 0 auto;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(142,59,77,.2);
+  }
+  .item .notes{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    display:block;
+    margin-top:2px;
+  }
+  .item .name-block{flex:1; min-width:0;}
+  .item a.link{color:var(--accent);}
+  .priority-tag{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    padding:3px 8px;
+    border-radius:20px;
+    flex:0 0 auto;
+  }
+  .priority-tag.must{background:#f3d8dc; color:var(--accent);}
+  .priority-tag.nice{background:#f6ecd8; color:var(--gold);}
+  .lightbox{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(58,31,36,.85);
+    align-items:center; justify-content:center;
+    z-index:100;
+    cursor:zoom-out;
+  }
+  .lightbox.open{display:flex;}
+  .lightbox img{max-width:90%; max-height:90%; border-radius:10px;}
+
+  .category{margin-bottom:32px;}
+  .category h2{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:19px;
+    letter-spacing:.02em;
+    color:var(--accent);
+    font-weight:600;
+    border-bottom:1px solid var(--gold);
+    padding-bottom:8px;
+    margin:0 0 10px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .category h2 .count{
+    color:var(--muted);
+    font-weight:400;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-style:normal;
+    font-size:12px;
+  }
+
+  .item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .item.bought{opacity:.45;}
+  .item.bought .name{text-decoration:line-through;}
+  .check{
+    width:22px; height:22px;
+    flex:0 0 auto;
+    cursor:pointer;
+    position:relative;
+  }
+  .check svg{width:22px;height:22px; position:absolute; top:0; left:0;}
+  .check .heart-outline{fill:none; stroke:var(--accent); stroke-width:1.6;}
+  .check .heart-fill{fill:var(--accent); stroke:none; display:none;}
+  .item.bought .check .heart-outline{display:none;}
+  .item.bought .check .heart-fill{display:block;}
+  .item .name{flex:1; font-size:16px;}
+  .item .price{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    color:var(--muted);
+    flex:0 0 auto;
+  }
+  .item .by{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:11px;
+    color:var(--accent);
+    background:var(--accent-soft);
+    padding:3px 9px;
+    border-radius:20px;
+    flex:0 0 auto;
+  }
+  .item .del{
+    background:none;
+    color:var(--muted);
+    font-size:16px;
+    padding:2px 6px;
+    flex:0 0 auto;
+  }
+  .item .del:hover{color:#a4462f;}
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:18px;
+    padding:50px 0;
+  }
+  .totals{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    color:var(--muted);
+    text-align:right;
+    padding:16px 4px 0;
+    border-top:1px solid var(--line);
+    margin-top:8px;
+  }
+</style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-box">
+    <h1>Fazafizo & Batoot</h1>
+    <p class="utility">Everything we're gathering, together. 🦆</p>
+    <div class="auth-error utility" id="auth-error"></div>
+    <input type="email" id="email" placeholder="Username" autocomplete="email">
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" id="auth-submit">Sign in</button>
+  </div>
+</div>
+
+<div id="app-screen">
+  <header>
+    <div>
+      <h1>Fazafizo & Batoot</h1>
+      <div class="sub" id="user-label"></div>
+    </div>
+    <button id="signout">Sign out</button>
+  </header>
+  <main>
+    <div class="add-row">
+      <input type="text" id="new-name" placeholder="Item name">
+      <select id="new-category">
+        <option>🍳 Kitchen</option>
+        <option>🛋️ Living Room</option>
+        <option>🛏️ Bedroom</option>
+        <option>🛁 Bathroom</option>
+        <option>🪑 Furniture</option>
+        <option>🔌 Appliances</option>
+        <option>🖼️ Decor</option>
+        <option>📦 Other</option>
+      </select>
+      <select id="new-priority">
+        <option value="Must-have">Must-have</option>
+        <option value="Nice-to-have">Nice-to-have</option>
+      </select>
+      <input type="number" id="new-price" placeholder="Price">
+      <input type="number" id="new-qty" placeholder="Qty" value="1" min="1">
+    </div>
+    <div class="add-row">
+      <input type="text" id="new-link" placeholder="Product link (optional)">
+      <input type="text" id="new-notes" placeholder="Notes (optional)">
+      <label class="photo-btn" for="new-photo" id="photo-label">Add photo</label>
+      <input type="file" id="new-photo" accept="image/*" style="display:none">
+      <button id="add-btn">Add item</button>
+    </div>
+
+    <div id="list-container"></div>
+    <div class="totals" id="totals"></div>
+  </main>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="">
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword,
+    onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc,
+    doc, serverTimestamp, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ==== FILL IN YOUR FIREBASE CONFIG (from Firebase Console > Project Settings) ====
+  const firebaseConfig = {
+    apiKey: "AIzaSyA01tSumAzD2bltKHKfGuCqihSqUE9brjM",
+    authDomain: "the-life-25a38.firebaseapp.com",
+    projectId: "the-life-25a38",
+    storageBucket: "the-life-25a38.firebasestorage.app",
+    messagingSenderId: "149113055887",
+    appId: "1:149113055887:web:1a30a9037d89c99a389efa"
+  };
+  // ===================================================================
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // ==== Cloudinary (free image hosting, no card required) ====
+  // Sign up at cloudinary.com, find "Cloud name" on your dashboard,
+  // then create an unsigned upload preset: Settings > Upload > Add upload preset > Signing Mode: Unsigned
+  const CLOUDINARY_CLOUD_NAME = "kz9ilyiy";
+  const CLOUDINARY_UPLOAD_PRESET = "jbltarww";
+
+  // ---- Auth UI (sign-in only — accounts are created in the Firebase Console) ----
+  const authError = document.getElementById('auth-error');
+  const submitBtn = document.getElementById('auth-submit');
+
+  submitBtn.onclick = async () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    authError.textContent = '';
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (e) {
+      authError.textContent = e.message.replace('Firebase: ', '');
+    }
+  };
+
+  document.getElementById('password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitBtn.click();
+  });
+
+  document.getElementById('signout').onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'block';
+      document.getElementById('user-label').textContent = `Welcome back, ${user.email.split('@')[0]} 🦆`;
+      startListener();
+    } else {
+      document.getElementById('auth-screen').style.display = 'flex';
+      document.getElementById('app-screen').style.display = 'none';
+    }
+  });
+
+  // ---- Firestore list ----
+  const itemsRef = collection(db, 'items');
+  let unsub = null;
+
+  function startListener() {
+    if (unsub) return;
+    const q = query(itemsRef, orderBy('createdAt', 'desc'));
+    unsub = onSnapshot(q, (snap) => {
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      render(items);
+    });
+  }
+
+  const photoInput = document.getElementById('new-photo');
+  const photoLabel = document.getElementById('photo-label');
+  photoInput.onchange = () => {
+    photoLabel.textContent = photoInput.files[0] ? photoInput.files[0].name.slice(0, 14) : 'Add photo';
+    photoLabel.classList.toggle('has-file', !!photoInput.files[0]);
+  };
+
+  document.getElementById('add-btn').onclick = async () => {
+    const name = document.getElementById('new-name').value.trim();
+    const category = document.getElementById('new-category').value;
+    const priority = document.getElementById('new-priority').value;
+    const price = parseFloat(document.getElementById('new-price').value) || 0;
+    const qty = parseInt(document.getElementById('new-qty').value) || 1;
+    const link = document.getElementById('new-link').value.trim();
+    const notes = document.getElementById('new-notes').value.trim();
+    const file = photoInput.files[0];
+    if (!name) return;
+
+    const addBtn = document.getElementById('add-btn');
+    addBtn.disabled = true;
+    addBtn.textContent = 'Adding...';
+
+    let photoURL = '';
+    try {
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
+        photoURL = data.secure_url;
+      }
+      await addDoc(itemsRef, {
+        name, category, priority, price, qty, link, notes, photoURL,
+        status: 'needed',
+        addedBy: auth.currentUser.email.split('@')[0],
+        createdAt: serverTimestamp()
+      });
+    } catch (e) {
+      alert('Could not add item: ' + e.message);
+    }
+
+    document.getElementById('new-name').value = '';
+    document.getElementById('new-price').value = '';
+    document.getElementById('new-qty').value = '1';
+    document.getElementById('new-link').value = '';
+    document.getElementById('new-notes').value = '';
+    photoInput.value = '';
+    photoLabel.textContent = 'Add photo';
+    photoLabel.classList.remove('has-file');
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add item';
+  };
+
+  window.toggleItem = async (id, current) => {
+    await updateDoc(doc(db, 'items', id), { status: current === 'bought' ? 'needed' : 'bought' });
+  };
+  window.deleteItem = async (id) => {
+    await deleteDoc(doc(db, 'items', id));
+  };
+  window.openLightbox = (url) => {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('open');
+  };
+  window.closeLightbox = () => {
+    document.getElementById('lightbox').classList.remove('open');
+  };
+
+  function render(items) {
+    const container = document.getElementById('list-container');
+    const totalsEl = document.getElementById('totals');
+    if (items.length === 0) {
+      container.innerHTML = '<div class="empty">No items yet — add the first thing you need.</div>';
+      totalsEl.textContent = '';
+      return;
+    }
+    const byCategory = {};
+    items.forEach(it => {
+      (byCategory[it.category] = byCategory[it.category] || []).push(it);
+    });
+
+    let html = '';
+    let totalAll = 0, totalBought = 0;
+    for (const cat of Object.keys(byCategory)) {
+      const list = byCategory[cat];
+      html += `<div class="category"><h2>${cat} <span class="count">${list.length}</span></h2>`;
+      list.forEach(it => {
+        const qty = it.qty || 1;
+        const lineTotal = (it.price || 0) * qty;
+        totalAll += lineTotal;
+        if (it.status === 'bought') totalBought += lineTotal;
+        const isMust = (it.priority || 'Must-have') === 'Must-have';
+        html += `
+          <div class="item ${it.status === 'bought' ? 'bought' : ''}">
+            <div class="check" onclick="toggleItem('${it.id}','${it.status}')">
+              <svg class="heart-outline" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.3 4.5 5.6 4c2-.3 3.8.6 4.9 2.3C11.6 4.6 13.4 3.7 15.4 4c3.3.5 5.1 3.8 3.6 7.2-2.5 4.7-10 9.3-10 9.3z"/></svg>
+              <svg class="heart-fill" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.3 4.5 5.6 4c2-.3 3.8.6 4.9 2.3C11.6 4.6 13.4 3.7 15.4 4c3.3.5 5.1 3.8 3.6 7.2-2.5 4.7-10 9.3-10 9.3z"/></svg>
+            </div>
+            ${it.photoURL ? `<img class="thumb" src="${it.photoURL}" onclick="openLightbox('${it.photoURL}')">` : ''}
+            <div class="name-block">
+              <div class="name">${escapeHtml(it.name)}${qty > 1 ? ` ×${qty}` : ''} ${it.link ? `<a class="link utility" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">↗</a>` : ''}</div>
+              ${it.notes ? `<span class="notes">${escapeHtml(it.notes)}</span>` : ''}
+            </div>
+            <span class="priority-tag ${isMust ? 'must' : 'nice'}">${isMust ? 'Must' : 'Nice'}</span>
+            ${it.price ? `<div class="price">$${lineTotal.toFixed(2)}</div>` : ''}
+            <div class="by">${escapeHtml(it.addedBy || '')}</div>
+            <button class="del" onclick="deleteItem('${it.id}')">×</button>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+    container.innerHTML = html;
+    totalsEl.textContent = `Bought $${totalBought.toFixed(2)} of $${totalAll.toFixed(2)} total`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
