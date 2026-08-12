@@ -960,7 +960,7 @@
     nameInput.value = data.name || '';
     categoryInput.value = data.categoryId || 'kitchen';
     priorityInput.value = data.priority || 'must';
-    priceInput.value = data.price || '';
+    priceInput.value = (typeof data.price === 'number') ? data.price : '';
     qtyInput.value = data.quantity || 1;
     linkInput.value = data.link || '';
     notesInput.value = data.notes || '';
@@ -1078,10 +1078,11 @@
         updatedAt: serverTimestamp()
       });
     } catch (e) {
-      toast('Could not update claim: ' + e.message);
+      toast('Could not update claim — check your connection and try again.');
     }
   };
-  window.deleteItem = async (id, name) => {
+  window.deleteItem = async (id) => {
+    const name = (window.itemsById[id] || {}).name || 'this item';
     if (!confirm(`Remove "${name}" from the list?`)) return;
     try {
       await deleteDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', id));
@@ -1316,7 +1317,7 @@
             </div>
             ${it.photoURL ? `<img class="thumb" src="${it.photoURL}" onclick="openLightbox('${it.photoURL}')">` : ''}
             <div class="name-block">
-              <div class="name">${escapeHtml(it.name)}${qty > 1 ? ` ×${qty}` : ''} ${it.link ? `<a class="link utility" href="${escapeHtml(it.link)}" target="_blank" rel="noopener">↗</a>` : ''}</div>
+              <div class="name">${escapeHtml(it.name)}${qty > 1 ? ` ×${qty}` : ''} ${safeHref(it.link) ? `<a class="link utility" href="${escapeHtml(safeHref(it.link))}" target="_blank" rel="noopener">↗</a>` : ''}</div>
               ${it.notes ? `<span class="notes">${escapeHtml(it.notes)}</span>` : ''}
             </div>
             <span class="priority-tag ${isMust ? 'must' : 'nice'}">${isMust ? 'Must' : 'Nice'}</span>
@@ -1330,7 +1331,7 @@
             ) : ''}
             <div class="by">${escapeHtml(addedByName)}</div>
             <button class="expand-btn ${isOpen ? 'open' : ''}" data-id="${it.id}" onclick="toggleTrail('${it.id}')">▾</button>
-            <button class="del" onclick="deleteItem('${it.id}','${escapeHtml(it.name).replace(/'/g, "\\'")}')">×</button>
+            <button class="del" onclick="deleteItem('${it.id}')">×</button>
           </div>
           <div class="trail ${isOpen ? 'open' : ''}" data-id="${it.id}">
             <span class="dot">●</span> Added by ${escapeHtml(addedByName)}${addedDate ? ` on ${addedDate}` : ''}<br>
@@ -1349,7 +1350,14 @@
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function safeHref(url) {
+    if (!url) return null;
+    const trimmed = url.trim();
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return null;
   }
 </script>
 </body>
