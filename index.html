@@ -387,18 +387,31 @@
     flex:0 0 auto;
   }
   .item .del:hover{color:#a4462f;}
-  .claim-btn{
+  .claim{
     font-family:'Karla','Helvetica Neue',Arial,sans-serif;
     font-size:11px;
-    padding:4px 10px;
-    border-radius:20px;
-    border:1px solid var(--accent);
-    background:#fff;
-    color:var(--accent);
     flex:0 0 auto;
     white-space:nowrap;
+    text-align:right;
+    line-height:1.4;
+    animation:claimFade .25s ease;
   }
-  .claim-btn.claimed{background:var(--accent-soft); border-color:var(--accent-soft); color:var(--accent);}
+  @keyframes claimFade{from{opacity:0;} to{opacity:1;}}
+  .claim-offer{
+    color:var(--accent);
+    cursor:pointer;
+    text-decoration:none;
+  }
+  .claim-offer:hover{text-decoration:underline;}
+  .claim-mine{color:var(--accent);}
+  .claim-mine .unclaim{
+    display:block;
+    color:var(--muted);
+    font-size:10px;
+    cursor:pointer;
+    text-decoration:underline;
+  }
+  .claim-other{color:var(--muted);}
   .expand-btn{
     background:none;
     color:var(--muted);
@@ -975,7 +988,13 @@
             </div>
             <span class="priority-tag ${isMust ? 'must' : 'nice'}">${isMust ? 'Must' : 'Nice'}</span>
             ${it.price ? `<div class="price">${lineTotal.toFixed(2)} ${escapeHtml(currency)}</div>` : ''}
-            ${it.status !== 'bought' ? `<button class="claim-btn ${it.claimedBy ? 'claimed' : ''}" onclick="claimItem('${it.id}','${it.claimedBy || ''}')">${it.claimedBy ? (isClaimedByMe ? 'You got it' : claimedByName) : "I'll get it"}</button>` : ''}
+            ${it.status !== 'bought' ? (
+              !it.claimedBy
+                ? `<a class="claim claim-offer" onclick="claimItem('${it.id}','')">I'll get this</a>`
+                : isClaimedByMe
+                  ? `<span class="claim claim-mine">You're getting this<a class="unclaim" onclick="claimItem('${it.id}','${it.claimedBy}')">Unclaim</a></span>`
+                  : `<span class="claim claim-other">${escapeHtml(claimedByName)} is getting this</span>`
+            ) : ''}
             <div class="by">${escapeHtml(addedByName)}</div>
             <button class="expand-btn ${isOpen ? 'open' : ''}" data-id="${it.id}" onclick="toggleTrail('${it.id}')">▾</button>
             <button class="del" onclick="deleteItem('${it.id}','${escapeHtml(it.name).replace(/'/g, "\\'")}')">×</button>
