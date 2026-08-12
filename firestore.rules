@@ -52,6 +52,15 @@ service cloud.firestore {
 
         allow delete: if isMember(householdId);
       }
+
+      match /activity/{eventId} {
+        allow read: if isMember(householdId);
+        allow create: if isMember(householdId)
+          && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.type in ['added', 'edited', 'purchased', 'unpurchased', 'deleted']
+          && request.resource.data.itemName is string;
+        allow update, delete: if false;
+      }
     }
   }
 }

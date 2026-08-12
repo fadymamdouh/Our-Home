@@ -71,8 +71,25 @@
     font-size:14px;
     background:#fffdfc;
     color:var(--ink);
+    transition:border-color .2s;
   }
-  input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+  select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  @media (hover:none){
+    input, select{font-size:16px;} /* prevents iOS Safari auto-zoom on focus */
+  }
+  .skeleton-row{
+    height:52px;
+    border-radius:8px;
+    margin-bottom:10px;
+    background:linear-gradient(90deg, var(--accent-soft) 25%, #fbeff1 50%, var(--accent-soft) 75%);
+    background-size:200% 100%;
+    animation:skeletonShimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes skeletonShimmer{
+    0%{background-position:200% 0;}
+    100%{background-position:-200% 0;}
+  }
   button{
     cursor:pointer;
     border:none;
@@ -263,7 +280,8 @@
 
   #fab{
     position:fixed;
-    right:22px; bottom:22px;
+    right:calc(22px + env(safe-area-inset-right));
+    bottom:calc(22px + env(safe-area-inset-bottom));
     width:52px; height:52px;
     border-radius:50%;
     background:var(--accent);
@@ -275,17 +293,21 @@
     justify-content:center;
     box-shadow:0 8px 24px -6px rgba(142,59,77,.45);
     z-index:150;
+    transition:transform .15s, background .15s;
   }
   #fab.visible{display:flex;}
-  #fab:hover{background:#7a2f40;}
+  #fab:hover{background:#7a2f40; transform:scale(1.06);}
+  #fab:active{transform:scale(.96);}
 
   .sheet-overlay{
     display:none;
     position:fixed; inset:0;
     background:rgba(58,31,36,.4);
     z-index:160;
+    opacity:0;
+    transition:opacity .25s;
   }
-  .sheet-overlay.open{display:block;}
+  .sheet-overlay.open{display:block; opacity:1;}
 
   .sheet{
     position:fixed;
@@ -394,8 +416,10 @@
     align-items:center; justify-content:center;
     z-index:100;
     cursor:zoom-out;
+    opacity:0;
+    transition:opacity .2s;
   }
-  .lightbox.open{display:flex;}
+  .lightbox.open{display:flex; opacity:1;}
   .lightbox img{max-width:90%; max-height:90%; border-radius:10px;}
 
   .category{margin-bottom:32px;}
@@ -411,7 +435,9 @@
     margin:0 0 10px;
     display:flex;
     justify-content:space-between;
+    transition:border-color .2s;
   }
+  .category h2:hover{border-color:var(--accent);}
   .category h2 .count{
     color:var(--muted);
     font-weight:400;
@@ -426,20 +452,31 @@
     gap:12px;
     padding:12px 4px;
     border-bottom:1px solid var(--line);
+    transition:opacity .3s;
   }
   .item.bought{opacity:.45;}
   .item.bought .name{text-decoration:line-through;}
   .check{
-    width:22px; height:22px;
+    width:36px; height:36px;
+    margin:-7px;
     flex:0 0 auto;
     cursor:pointer;
     position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
-  .check svg{width:22px;height:22px; position:absolute; top:0; left:0;}
+  .check svg{width:22px;height:22px; position:absolute; top:7px; left:7px;}
   .check .heart-outline{fill:none; stroke:var(--accent); stroke-width:1.6;}
   .check .heart-fill{fill:var(--accent); stroke:none; display:none;}
   .item.bought .check .heart-outline{display:none;}
   .item.bought .check .heart-fill{display:block;}
+  .check.pulse svg{animation:heartPulse .35s ease;}
+  @keyframes heartPulse{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.28);}
+    100%{transform:scale(1);}
+  }
   .item .name{flex:1; font-size:16px;}
   .item .price{
     font-family:'Karla','Helvetica Neue',Arial,sans-serif;
@@ -460,8 +497,10 @@
     background:none;
     color:var(--muted);
     font-size:16px;
-    padding:2px 6px;
+    padding:8px 10px;
+    margin:-8px -4px -8px 0;
     flex:0 0 auto;
+    transition:color .15s;
   }
   .item .del:hover{color:#a4462f;}
   .claim{
@@ -493,10 +532,12 @@
     background:none;
     color:var(--muted);
     font-size:12px;
-    padding:2px 4px;
+    padding:10px 8px;
+    margin:-10px -4px;
     flex:0 0 auto;
-    transition:transform .2s;
+    transition:transform .2s, color .15s;
   }
+  .expand-btn:hover{color:var(--accent);}
   .expand-btn.open{transform:rotate(180deg);}
   .item-wrap{border-bottom:1px solid var(--line);}
   .item-wrap .item{border-bottom:none;}
@@ -678,7 +719,7 @@
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc,
-    doc, serverTimestamp, query, orderBy, getDocs, getDoc
+    doc, serverTimestamp, query, orderBy, getDocs, getDoc, limit
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   // ==== FILL IN YOUR FIREBASE CONFIG (from Firebase Console > Project Settings) ====
@@ -785,15 +826,34 @@
 
   // ---- Firestore list ----
   const itemsRef = collection(db, 'households', HOUSEHOLD_ID, 'items');
+  const activityRef = collection(db, 'households', HOUSEHOLD_ID, 'activity');
+
+  async function logActivity(type, itemName) {
+    try {
+      await addDoc(activityRef, {
+        type, itemName,
+        byUid: auth.currentUser.uid,
+        timestamp: serverTimestamp()
+      });
+    } catch (e) {
+      // Non-critical — the item action already succeeded, don't surface this to the user.
+      console.warn('Activity log failed:', e.message);
+    }
+  }
   let unsub = null;
 
   function startListener() {
     if (unsub) return;
+    document.getElementById('list-container').innerHTML =
+      '<div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div>';
     const q = query(itemsRef, orderBy('createdAt', 'desc'));
     unsub = onSnapshot(q, (snap) => {
       const items = [];
       snap.forEach(d => items.push({ id: d.id, ...d.data() }));
       render(items);
+    }, (err) => {
+      document.getElementById('list-container').innerHTML =
+        '<div class="empty">Something\'s out of sync — try refreshing.</div>';
     });
   }
 
@@ -935,6 +995,7 @@
         const updateData = { name, categoryId, priority, price, quantity, link, notes, updatedAt: serverTimestamp() };
         if (photoURL) updateData.photoURL = photoURL;
         await updateDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', editingId), updateData);
+        logActivity('edited', name);
         toast('Saved');
       } else {
         await addDoc(itemsRef, {
@@ -948,6 +1009,7 @@
           updatedAt: serverTimestamp(),
           purchasedAt: null
         });
+        logActivity('added', name);
         toast('Added to the list');
       }
 
@@ -963,8 +1025,9 @@
     sheetSubmit.textContent = editingId ? 'Save changes' : 'Add item';
   };
 
-  window.toggleItem = async (id, current) => {
+  window.toggleItem = async (id, current, el) => {
     const nowBought = current !== 'bought';
+    if (el) { el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 350); }
     try {
       await updateDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', id), {
         status: nowBought ? 'bought' : 'needed',
@@ -972,8 +1035,11 @@
         purchasedAt: nowBought ? serverTimestamp() : null,
         updatedAt: serverTimestamp()
       });
+      const itemName = (window.itemsById[id] || {}).name || 'item';
+      logActivity(nowBought ? 'purchased' : 'unpurchased', itemName);
+      toast(nowBought ? 'Marked as bought' : 'Marked as still needed');
     } catch (e) {
-      toast('Could not update item: ' + e.message);
+      toast('Could not update item — check your connection and try again.');
     }
   };
   window.claimItem = async (id, current) => {
@@ -992,9 +1058,10 @@
     if (!confirm(`Remove "${name}" from the list?`)) return;
     try {
       await deleteDoc(doc(db, 'households', HOUSEHOLD_ID, 'items', id));
+      logActivity('deleted', name);
       toast('Removed');
     } catch (e) {
-      toast('Could not remove item: ' + e.message);
+      toast('Could not remove item — check your connection and try again.');
     }
   };
   window.openLightbox = (url) => {
@@ -1087,42 +1154,48 @@
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
-  function renderRecentChanges() {
-    const items = Object.values(window.itemsById);
-    const entries = [];
-    items.forEach(it => {
-      if (it.createdAt && it.createdAt.toDate) {
-        entries.push({
-          date: it.createdAt.toDate(),
-          text: `${escapeHtml(members[it.addedBy] || 'Someone')} added "${escapeHtml(it.name)}"`
-        });
-      }
-      if (it.status === 'bought' && it.purchasedAt && it.purchasedAt.toDate) {
-        entries.push({
-          date: it.purchasedAt.toDate(),
-          text: `${escapeHtml(members[it.purchasedBy] || 'Someone')} marked "${escapeHtml(it.name)}" as bought`
-        });
-      }
-    });
-    entries.sort((a, b) => b.date - a.date);
+  const ACTIVITY_VERBS = {
+    added: (name) => `added "${name}"`,
+    edited: (name) => `edited "${name}"`,
+    purchased: (name) => `marked "${name}" as bought`,
+    unpurchased: (name) => `marked "${name}" as not bought`,
+    deleted: (name) => `removed "${name}"`
+  };
 
+  async function renderRecentChanges() {
     const container = document.getElementById('recent-list');
-    if (entries.length === 0) {
+    container.innerHTML = '<div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div>';
+
+    let snap;
+    try {
+      snap = await getDocs(query(activityRef, orderBy('timestamp', 'desc'), limit(40)));
+    } catch (e) {
+      container.innerHTML = '<div class="empty">Couldn\'t load recent activity right now.</div>';
+      return;
+    }
+
+    if (snap.empty) {
       container.innerHTML = '<div class="empty">No activity yet — once you two start adding things, it\'ll show up here.</div>';
       return;
     }
 
     let html = '';
     let lastLabel = null;
-    entries.forEach(e => {
-      const label = dayLabel(e.date);
+    snap.forEach(d => {
+      const e = d.data();
+      if (!e.timestamp || !e.timestamp.toDate) return;
+      const date = e.timestamp.toDate();
+      const label = dayLabel(date);
       if (label !== lastLabel) {
         html += `<div class="recent-day">${label}</div>`;
         lastLabel = label;
       }
-      html += `<div class="recent-entry">${e.text}</div>`;
+      const verb = ACTIVITY_VERBS[e.type];
+      if (!verb) return;
+      const byName = members[e.byUid] || 'Someone';
+      html += `<div class="recent-entry">${escapeHtml(byName)} ${verb(escapeHtml(e.itemName || 'an item'))}</div>`;
     });
-    container.innerHTML = html;
+    container.innerHTML = html || '<div class="empty">No activity yet.</div>';
   }
 
   // ---- Settings ----
@@ -1210,7 +1283,7 @@
         html += `
           <div class="item-wrap">
           <div class="item ${it.status === 'bought' ? 'bought' : ''}">
-            <div class="check" onclick="toggleItem('${it.id}','${it.status}')">
+            <div class="check" onclick="toggleItem('${it.id}','${it.status}', this)">
               <svg class="heart-outline" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.3 4.5 5.6 4c2-.3 3.8.6 4.9 2.3C11.6 4.6 13.4 3.7 15.4 4c3.3.5 5.1 3.8 3.6 7.2-2.5 4.7-10 9.3-10 9.3z"/></svg>
               <svg class="heart-fill" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.3 4.5 5.6 4c2-.3 3.8.6 4.9 2.3C11.6 4.6 13.4 3.7 15.4 4c3.3.5 5.1 3.8 3.6 7.2-2.5 4.7-10 9.3-10 9.3z"/></svg>
             </div>
