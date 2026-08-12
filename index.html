@@ -183,6 +183,83 @@
     text-decoration:none;
   }
   .dash-link:hover{text-decoration:underline;}
+  .dash-links{display:flex; justify-content:space-between;}
+
+  .header-actions{display:flex; align-items:center; gap:14px;}
+  #settings-open{
+    background:none;
+    color:var(--muted);
+    font-size:18px;
+    padding:4px;
+  }
+  #settings-open:hover{color:var(--accent);}
+
+  .sub-view{display:none;}
+  .sub-view.open{display:block;}
+  .back-link{
+    display:inline-block;
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:13px;
+    color:var(--muted);
+    cursor:pointer;
+    text-decoration:none;
+    margin-bottom:18px;
+  }
+  .back-link:hover{color:var(--accent);}
+  .view-title{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:26px;
+    color:var(--accent);
+    margin:0 0 20px;
+    font-weight:600;
+  }
+  .view-caption{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:20px;
+  }
+
+  .recent-day{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--gold);
+    margin:22px 0 8px;
+  }
+  .recent-day:first-child{margin-top:0;}
+  .recent-entry{
+    font-size:15px;
+    padding:7px 0;
+    border-bottom:1px solid var(--line);
+  }
+
+  .settings-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .settings-label{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    width:120px;
+    flex:0 0 auto;
+  }
+  .settings-value{flex:1; font-size:15px;}
+  .settings-edit{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:12px;
+    color:var(--accent);
+    cursor:pointer;
+    text-decoration:underline;
+    flex:0 0 auto;
+  }
 
   #fab{
     position:fixed;
@@ -490,18 +567,59 @@
       <h1>Fazafizo & Batoot</h1>
       <div class="sub" id="user-label"></div>
     </div>
-    <button id="signout">Sign out</button>
+    <div class="header-actions">
+      <button id="settings-open" aria-label="Settings">⚙</button>
+      <button id="signout">Sign out</button>
+    </div>
   </header>
   <main>
-    <div id="dashboard">
-      <p class="dash-line" id="dash-counts">—</p>
-      <div class="dash-bar"><div class="dash-bar-fill" id="dash-bar-fill"></div></div>
-      <p class="dash-budget" id="dash-budget">—</p>
-      <a class="dash-link" id="dash-see-all">See everything ↓</a>
-    </div>
+    <div id="main-view">
+      <div id="dashboard">
+        <p class="dash-line" id="dash-counts">—</p>
+        <div class="dash-bar"><div class="dash-bar-fill" id="dash-bar-fill"></div></div>
+        <p class="dash-budget" id="dash-budget">—</p>
+        <div class="dash-links">
+          <a class="dash-link" id="dash-see-all">See everything ↓</a>
+          <a class="dash-link" id="dash-recent">Recent changes →</a>
+        </div>
+      </div>
 
     <div id="list-container"></div>
     <div class="totals" id="totals"></div>
+    </div>
+
+    <div id="recent-view" class="sub-view">
+      <a class="back-link" id="recent-back">← Back</a>
+      <h2 class="view-title">Recent changes</h2>
+      <div id="recent-list"></div>
+      <p class="view-caption utility">Showing recent additions and purchases</p>
+    </div>
+
+    <div id="settings-view" class="sub-view">
+      <a class="back-link" id="settings-back">← Back</a>
+      <h2 class="view-title">Settings</h2>
+
+      <div class="settings-row">
+        <span class="settings-label">Household name</span>
+        <span class="settings-value" id="settings-name">—</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Currency</span>
+        <span class="settings-value" id="settings-currency">—</span>
+        <a class="settings-edit" id="settings-edit-currency">Edit</a>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Home budget</span>
+        <span class="settings-value" id="settings-budget">—</span>
+        <a class="settings-edit" id="settings-edit-budget">Edit</a>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Signed in as</span>
+        <span class="settings-value" id="settings-user">—</span>
+      </div>
+
+      <button class="btn-primary" id="settings-signout" style="margin-top:20px;">Sign out</button>
+    </div>
   </main>
 </div>
 
@@ -932,6 +1050,121 @@
   document.getElementById('dash-see-all').onclick = () => {
     document.getElementById('list-container').scrollIntoView({ behavior: 'smooth' });
   };
+
+  // ---- View switching (main / recent / settings) ----
+  function showView(id) {
+    document.getElementById('main-view').classList.remove('open');
+    document.getElementById('recent-view').classList.remove('open');
+    document.getElementById('settings-view').classList.remove('open');
+    if (id === 'main') {
+      document.getElementById('main-view').style.display = 'block';
+      document.getElementById('recent-view').classList.remove('open');
+      document.getElementById('settings-view').classList.remove('open');
+    } else {
+      document.getElementById('main-view').style.display = 'none';
+      document.getElementById(id).classList.add('open');
+    }
+  }
+  document.getElementById('main-view').style.display = 'block';
+
+  document.getElementById('dash-recent').onclick = () => {
+    renderRecentChanges();
+    showView('recent-view');
+  };
+  document.getElementById('recent-back').onclick = () => showView('main');
+  document.getElementById('settings-open').onclick = () => {
+    renderSettings();
+    showView('settings-view');
+  };
+  document.getElementById('settings-back').onclick = () => showView('main');
+
+  function dayLabel(date) {
+    const now = new Date();
+    const d = new Date(date);
+    const diffDays = Math.floor((now.setHours(0,0,0,0) - new Date(d).setHours(0,0,0,0)) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function renderRecentChanges() {
+    const items = Object.values(window.itemsById);
+    const entries = [];
+    items.forEach(it => {
+      if (it.createdAt && it.createdAt.toDate) {
+        entries.push({
+          date: it.createdAt.toDate(),
+          text: `${escapeHtml(members[it.addedBy] || 'Someone')} added "${escapeHtml(it.name)}"`
+        });
+      }
+      if (it.status === 'bought' && it.purchasedAt && it.purchasedAt.toDate) {
+        entries.push({
+          date: it.purchasedAt.toDate(),
+          text: `${escapeHtml(members[it.purchasedBy] || 'Someone')} marked "${escapeHtml(it.name)}" as bought`
+        });
+      }
+    });
+    entries.sort((a, b) => b.date - a.date);
+
+    const container = document.getElementById('recent-list');
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty">No activity yet — once you two start adding things, it\'ll show up here.</div>';
+      return;
+    }
+
+    let html = '';
+    let lastLabel = null;
+    entries.forEach(e => {
+      const label = dayLabel(e.date);
+      if (label !== lastLabel) {
+        html += `<div class="recent-day">${label}</div>`;
+        lastLabel = label;
+      }
+      html += `<div class="recent-entry">${e.text}</div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  // ---- Settings ----
+  function renderSettings() {
+    document.getElementById('settings-name').textContent = 'Fazafizo & Batoot';
+    document.getElementById('settings-currency').textContent = householdCurrency || '—';
+    document.getElementById('settings-budget').textContent =
+      householdBudget ? `${householdBudget.toFixed(0)} ${householdCurrency}` : 'Not set';
+    document.getElementById('settings-user').textContent =
+      `${members[auth.currentUser.uid] || 'You'} (${auth.currentUser.email})`;
+  }
+
+  document.getElementById('settings-edit-currency').onclick = async () => {
+    const val = prompt('Currency code (e.g. EGP, USD):', householdCurrency || '');
+    if (val === null || !val.trim()) return;
+    try {
+      await updateDoc(doc(db, 'households', HOUSEHOLD_ID), { currency: val.trim().toUpperCase() });
+      householdCurrency = val.trim().toUpperCase();
+      renderSettings();
+      toast('Currency updated');
+    } catch (e) {
+      toast('Could not update currency');
+    }
+  };
+
+  document.getElementById('settings-edit-budget').onclick = async () => {
+    const val = prompt('Home budget:', householdBudget || '');
+    if (val === null) return;
+    const num = parseFloat(val);
+    if (isNaN(num) || num < 0) { toast('Enter a valid number'); return; }
+    try {
+      await updateDoc(doc(db, 'households', HOUSEHOLD_ID), { budget: num });
+      householdBudget = num;
+      renderSettings();
+      renderDashboard(Object.values(window.itemsById));
+      toast('Budget updated');
+    } catch (e) {
+      toast('Could not update budget');
+    }
+  };
+
+  document.getElementById('settings-signout').onclick = () => signOut(auth);
 
   window.itemsById = {};
 
