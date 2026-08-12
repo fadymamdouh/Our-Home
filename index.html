@@ -991,6 +991,10 @@
     const priority = priorityInput.value;
     const price = parseFloat(priceInput.value) || 0;
     const quantity = parseInt(qtyInput.value) || 1;
+    if (price < 0 || quantity < 1) {
+      toast('Price and quantity can\'t be negative');
+      return;
+    }
     const link = linkInput.value.trim();
     const notes = notesInput.value.trim();
     const file = photoInput.files[0];
@@ -1135,10 +1139,10 @@
       const pct = Math.min(100, (purchasedAmount / householdBudget) * 100);
       fillEl.style.width = pct + '%';
       budgetEl.textContent =
-        `${purchasedAmount.toFixed(0)} ${currency} spent · ${remaining.toFixed(0)} ${currency} remaining of ${householdBudget.toFixed(0)} ${currency}`;
+        `${purchasedAmount.toFixed(2)} ${currency} spent · ${remaining.toFixed(2)} ${currency} remaining of ${householdBudget.toFixed(2)} ${currency}`;
     } else {
       fillEl.style.width = total === 0 ? '0%' : `${Math.min(100, (bought / total) * 100)}%`;
-      budgetEl.innerHTML = `${purchasedAmount.toFixed(0)} ${currency} spent so far — set a budget in Firestore to track it here`;
+      budgetEl.innerHTML = `${purchasedAmount.toFixed(2)} ${currency} spent so far — set a budget in Firestore to track it here`;
     }
   }
 
@@ -1231,7 +1235,7 @@
     document.getElementById('settings-name').textContent = 'Fazafizo & Batoot';
     document.getElementById('settings-currency').textContent = householdCurrency || '—';
     document.getElementById('settings-budget').textContent =
-      householdBudget ? `${householdBudget.toFixed(0)} ${householdCurrency}` : 'Not set';
+      householdBudget ? `${householdBudget.toFixed(2)} ${householdCurrency}` : 'Not set';
     document.getElementById('settings-user').textContent =
       `${members[auth.currentUser.uid] || 'You'} (${auth.currentUser.email})`;
   }

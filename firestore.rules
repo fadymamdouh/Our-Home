@@ -11,8 +11,8 @@ service cloud.firestore {
       return data.name is string
         && data.categoryId is string
         && data.priority in ['must', 'nice']
-        && data.price is number
-        && data.quantity is number
+        && data.price is number && data.price >= 0
+        && data.quantity is number && data.quantity >= 1
         && data.status in ['needed', 'bought'];
     }
 
