@@ -15,8 +15,9 @@
     --accent-soft:#f7e3e6;
     --good:#a9718a;
     --card:#ffffff;
-    --muted:#9c7a80;
+    --muted:#7d5c62;
     --gold:#c9a24b;
+    --gold-text:#7a5c26;
   }
   *{box-sizing:border-box;}
   body{
@@ -112,6 +113,12 @@
     border:none;
     border-radius:7px;
     font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+  }
+  .dash-link, .back-link, .settings-edit, .sheet-more, .claim-offer, .unclaim{
+    background:none;
+    padding:0;
+    font:inherit;
+    text-align:left;
   }
   .btn-primary{
     width:100%;
@@ -215,6 +222,8 @@
     color:var(--accent);
     cursor:pointer;
     text-decoration:none;
+    padding:8px 0;
+    margin:-8px 0;
   }
   .dash-link:hover{text-decoration:underline;}
   .dash-links{display:flex; justify-content:space-between;}
@@ -237,7 +246,8 @@
     color:var(--muted);
     cursor:pointer;
     text-decoration:none;
-    margin-bottom:18px;
+    margin:-8px 0 10px;
+    padding:8px 0;
   }
   .back-link:hover{color:var(--accent);}
   .view-title{
@@ -259,7 +269,7 @@
     font-size:12px;
     text-transform:uppercase;
     letter-spacing:.08em;
-    color:var(--gold);
+    color:var(--gold-text);
     margin:22px 0 8px;
   }
   .recent-day:first-child{margin-top:0;}
@@ -293,6 +303,8 @@
     cursor:pointer;
     text-decoration:underline;
     flex:0 0 auto;
+    padding:8px 4px;
+    margin:-8px -4px;
   }
 
   #fab{
@@ -380,6 +392,7 @@
     cursor:pointer;
     text-decoration:none;
     margin:2px 0 16px;
+    padding:8px 0;
   }
   .sheet-more:hover{text-decoration:underline;}
   .sheet-more-fields{display:none;}
@@ -425,7 +438,7 @@
     flex:0 0 auto;
   }
   .priority-tag.must{background:#f3d8dc; color:var(--accent);}
-  .priority-tag.nice{background:#f6ecd8; color:var(--gold);}
+  .priority-tag.nice{background:#f6ecd8; color:var(--gold-text);}
   .lightbox{
     display:none;
     position:fixed; inset:0;
@@ -466,13 +479,30 @@
   .item{
     display:flex;
     align-items:center;
+    flex-wrap:wrap;
     gap:12px;
     padding:12px 4px;
     border-bottom:1px solid var(--line);
     transition:opacity .3s;
+    row-gap:8px;
   }
   .item.bought{opacity:.45;}
   .item.bought .name{text-decoration:line-through;}
+  .item-meta{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-left:auto;
+  }
+  @media (max-width:480px){
+    .item-meta{
+      flex:1 1 100%;
+      margin-left:48px;
+      justify-content:flex-start;
+      flex-wrap:wrap;
+      row-gap:6px;
+    }
+  }
   .check{
     width:36px; height:36px;
     margin:-7px;
@@ -534,6 +564,9 @@
     color:var(--accent);
     cursor:pointer;
     text-decoration:none;
+    display:inline-block;
+    padding:8px 2px;
+    margin:-8px -2px;
   }
   .claim-offer:hover{text-decoration:underline;}
   .claim-mine{color:var(--accent);}
@@ -543,6 +576,8 @@
     font-size:10px;
     cursor:pointer;
     text-decoration:underline;
+    padding:6px 0 0;
+    margin-top:-2px;
   }
   .claim-other{color:var(--muted);}
   .expand-btn{
@@ -604,6 +639,18 @@
     border-top:1px solid var(--line);
     margin-top:8px;
   }
+
+  @media (max-width:480px){
+    .item{flex-wrap:wrap; row-gap:8px;}
+    .item .name-block{flex:1 1 100%; order:1;}
+    .item .priority-tag,
+    .item .price,
+    .item .claim,
+    .item .by,
+    .item .expand-btn,
+    .item .del{order:2;}
+    .item{justify-content:flex-start;}
+  }
 </style>
 </head>
 <body>
@@ -617,8 +664,8 @@
     <h1>Fazafizo & Batoot</h1>
     <p class="utility">Everything we're gathering, together. 🦆</p>
     <div class="auth-error utility" id="auth-error"></div>
-    <input type="email" id="email" placeholder="Username" autocomplete="email">
-    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+    <input type="email" id="email" placeholder="Username" aria-label="Email address" autocomplete="email">
+    <input type="password" id="password" placeholder="Password" aria-label="Password" autocomplete="current-password">
     <button class="btn-primary" id="auth-submit">Sign in</button>
   </div>
 </div>
@@ -641,8 +688,8 @@
         <div class="dash-bar"><div class="dash-bar-fill" id="dash-bar-fill"></div></div>
         <p class="dash-budget" id="dash-budget">—</p>
         <div class="dash-links">
-          <a class="dash-link" id="dash-see-all">See everything ↓</a>
-          <a class="dash-link" id="dash-recent">Recent changes →</a>
+          <button class="dash-link" id="dash-see-all">See everything ↓</button>
+          <button class="dash-link" id="dash-recent">Recent changes →</button>
         </div>
       </div>
 
@@ -651,14 +698,14 @@
     </div>
 
     <div id="recent-view" class="sub-view">
-      <a class="back-link" id="recent-back">← Back</a>
+      <button class="back-link" id="recent-back">← Back</button>
       <h2 class="view-title">Recent changes</h2>
       <div id="recent-list"></div>
       <p class="view-caption utility">Showing recent additions and purchases</p>
     </div>
 
     <div id="settings-view" class="sub-view">
-      <a class="back-link" id="settings-back">← Back</a>
+      <button class="back-link" id="settings-back">← Back</button>
       <h2 class="view-title">Settings</h2>
 
       <div class="settings-row">
@@ -668,12 +715,12 @@
       <div class="settings-row">
         <span class="settings-label">Currency</span>
         <span class="settings-value" id="settings-currency">—</span>
-        <a class="settings-edit" id="settings-edit-currency">Edit</a>
+        <button class="settings-edit" id="settings-edit-currency">Edit</button>
       </div>
       <div class="settings-row">
         <span class="settings-label">Home budget</span>
         <span class="settings-value" id="settings-budget">—</span>
-        <a class="settings-edit" id="settings-edit-budget">Edit</a>
+        <button class="settings-edit" id="settings-edit-budget">Edit</button>
       </div>
       <div class="settings-row">
         <span class="settings-label">Signed in as</span>
@@ -693,9 +740,9 @@
   <h2 class="sheet-title" id="sheet-title">Add something</h2>
   <p class="sheet-meta utility" id="sheet-meta"></p>
 
-  <input type="text" id="item-name" placeholder="Item name">
+  <input type="text" id="item-name" placeholder="Item name" aria-label="Item name">
   <div class="sheet-row">
-    <select id="item-category">
+    <select id="item-category" aria-label="Category">
       <option value="kitchen">🍳 Kitchen</option>
       <option value="living_room">🛋️ Living Room</option>
       <option value="bedroom">🛏️ Bedroom</option>
@@ -705,19 +752,19 @@
       <option value="decor">🖼️ Decor</option>
       <option value="other">📦 Other</option>
     </select>
-    <select id="item-priority">
+    <select id="item-priority" aria-label="Priority">
       <option value="must">Must-have</option>
       <option value="nice">Nice-to-have</option>
     </select>
   </div>
-  <input type="number" id="item-price" placeholder="Price">
+  <input type="number" id="item-price" placeholder="Price" aria-label="Price">
 
-  <a class="sheet-more" id="sheet-more-toggle">+ Add more details</a>
+  <button class="sheet-more" id="sheet-more-toggle">+ Add more details</button>
 
   <div class="sheet-more-fields" id="sheet-more-fields">
-    <input type="number" id="item-qty" placeholder="Qty" value="1" min="1">
-    <input type="text" id="item-link" placeholder="Product link (optional)">
-    <input type="text" id="item-notes" placeholder="Notes (optional)">
+    <input type="number" id="item-qty" placeholder="Qty" value="1" min="1" aria-label="Quantity">
+    <input type="text" id="item-link" placeholder="Product link (optional)" aria-label="Product link, optional">
+    <input type="text" id="item-notes" placeholder="Notes (optional)" aria-label="Notes, optional">
     <label class="photo-btn" for="item-photo" id="item-photo-label">Add photo</label>
     <input type="file" id="item-photo" accept="image/*" style="display:none">
   </div>
@@ -725,8 +772,8 @@
   <button class="btn-primary" id="sheet-submit">Add item</button>
 </div>
 
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <img id="lightbox-img" src="">
+<div class="lightbox" id="lightbox" onclick="closeLightbox()" role="button" tabindex="-1" aria-label="Close enlarged photo">
+  <img id="lightbox-img" src="" alt="Item photo, enlarged">
 </div>
 
 <div class="toast" id="toast"></div>
@@ -934,6 +981,7 @@
   function openSheet() {
     sheetOverlay.classList.add('open');
     sheet.classList.add('open');
+    setTimeout(() => nameInput.focus(), 50);
   }
   function hasUnsavedInput() {
     return nameInput.value.trim() || priceInput.value || linkInput.value.trim() || notesInput.value.trim();
@@ -1103,6 +1151,11 @@
   window.closeLightbox = () => {
     document.getElementById('lightbox').classList.remove('open');
   };
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('lightbox').classList.contains('open')) { closeLightbox(); return; }
+    if (sheet.classList.contains('open')) closeSheet();
+  });
 
   const expandedItems = new Set();
   window.toggleTrail = (id) => {
@@ -1315,33 +1368,35 @@
         html += `
           <div class="item-wrap">
           <div class="item ${it.status === 'bought' ? 'bought' : ''}">
-            <div class="check" onclick="toggleItem('${it.id}','${it.status}', this)">
+            <div class="check" onclick="toggleItem('${it.id}','${it.status}', this)" role="button" tabindex="0" aria-label="${it.status === 'bought' ? 'Mark as still needed' : 'Mark as bought'}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleItem('${it.id}','${it.status}', this)}">
               <svg class="heart-outline" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.3 4.5 5.6 4c2-.3 3.8.6 4.9 2.3C11.6 4.6 13.4 3.7 15.4 4c3.3.5 5.1 3.8 3.6 7.2-2.5 4.7-10 9.3-10 9.3z"/></svg>
               <svg class="heart-fill" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-10-9.3C.5 7.8 2.3 4.5 5.6 4c2-.3 3.8.6 4.9 2.3C11.6 4.6 13.4 3.7 15.4 4c3.3.5 5.1 3.8 3.6 7.2-2.5 4.7-10 9.3-10 9.3z"/></svg>
             </div>
-            ${it.photoURL ? `<img class="thumb" src="${it.photoURL}" onclick="openLightbox('${it.photoURL}')">` : ''}
+            ${it.photoURL ? `<img class="thumb" src="${it.photoURL}" alt="${escapeHtml(it.name)}" onclick="openLightbox('${it.photoURL}')">` : ''}
             <div class="name-block">
               <div class="name">${escapeHtml(it.name)}${qty > 1 ? ` ×${qty}` : ''} ${safeHref(it.link) ? `<a class="link utility" href="${escapeHtml(safeHref(it.link))}" target="_blank" rel="noopener">↗</a>` : ''}</div>
               ${it.notes ? `<span class="notes">${escapeHtml(it.notes)}</span>` : ''}
             </div>
-            <span class="priority-tag ${isMust ? 'must' : 'nice'}">${isMust ? 'Must' : 'Nice'}</span>
-            ${it.price ? `<div class="price">${lineTotal.toFixed(2)} ${escapeHtml(currency)}</div>` : ''}
-            ${it.status !== 'bought' ? (
-              !it.claimedBy
-                ? `<a class="claim claim-offer" onclick="claimItem('${it.id}','')">I'll get this</a>`
-                : isClaimedByMe
-                  ? `<span class="claim claim-mine">You're getting this<a class="unclaim" onclick="claimItem('${it.id}','${it.claimedBy}')">Unclaim</a></span>`
-                  : `<span class="claim claim-other">${escapeHtml(claimedByName)} is getting this</span>`
-            ) : ''}
-            <div class="by">${escapeHtml(addedByName)}</div>
-            <button class="expand-btn ${isOpen ? 'open' : ''}" data-id="${it.id}" onclick="toggleTrail('${it.id}')">▾</button>
-            <button class="del" onclick="deleteItem('${it.id}')">×</button>
+            <div class="item-meta">
+              <span class="priority-tag ${isMust ? 'must' : 'nice'}">${isMust ? 'Must' : 'Nice'}</span>
+              ${it.price ? `<div class="price">${lineTotal.toFixed(2)} ${escapeHtml(currency)}</div>` : ''}
+              ${it.status !== 'bought' ? (
+                !it.claimedBy
+                  ? `<button class="claim claim-offer" onclick="claimItem('${it.id}','')">I'll get this</button>`
+                  : isClaimedByMe
+                    ? `<span class="claim claim-mine">You're getting this<button class="unclaim" onclick="claimItem('${it.id}','${it.claimedBy}')">Unclaim</button></span>`
+                    : `<span class="claim claim-other">${escapeHtml(claimedByName)} is getting this</span>`
+              ) : ''}
+              <div class="by">${escapeHtml(addedByName)}</div>
+              <button class="expand-btn ${isOpen ? 'open' : ''}" data-id="${it.id}" onclick="toggleTrail('${it.id}')" aria-label="${isOpen ? 'Hide' : 'Show'} details">▾</button>
+              <button class="del" onclick="deleteItem('${it.id}')" aria-label="Delete ${escapeHtml(it.name)}">×</button>
+            </div>
           </div>
           <div class="trail ${isOpen ? 'open' : ''}" data-id="${it.id}">
             <span class="dot">●</span> Added by ${escapeHtml(addedByName)}${addedDate ? ` on ${addedDate}` : ''}<br>
             ${it.claimedBy ? `<span class="dot">●</span> Claimed by ${escapeHtml(claimedByName)}<br>` : ''}
             ${it.status === 'bought' ? `<span class="dot">●</span> Bought by ${escapeHtml(purchasedByName)}${purchasedDate ? ` on ${purchasedDate}` : ''}` : `<span class="dot">●</span> Still needed`}
-            <br><a class="sheet-more" style="margin-top:8px;" onclick="openEditSheet('${it.id}', itemsById['${it.id}'])">Edit</a>
+            <br><button class="sheet-more" style="margin-top:8px;" onclick="openEditSheet('${it.id}', itemsById['${it.id}'])">Edit</button>
           </div>
           </div>`;
       });
