@@ -425,6 +425,8 @@
     color:var(--muted);
     display:block;
     margin-top:2px;
+    overflow-wrap:break-word;
+    word-break:break-word;
   }
   .item .name-block{flex:1; min-width:0;}
   .item a.link{color:var(--accent);}
@@ -524,7 +526,7 @@
     40%{transform:scale(1.28);}
     100%{transform:scale(1);}
   }
-  .item .name{flex:1; font-size:16px;}
+  .item .name{flex:1; font-size:16px; overflow-wrap:break-word; word-break:break-word;}
   .item .price{
     font-family:'Karla','Helvetica Neue',Arial,sans-serif;
     font-size:13px;
@@ -1047,6 +1049,10 @@
     const notes = notesInput.value.trim();
     const file = photoInput.files[0];
     if (!name) { toast('Give it a name first'); return; }
+    if (file && file.size > 10 * 1024 * 1024) {
+      toast("That photo's too large (max 10MB) — try a smaller one, or save without it.");
+      return;
+    }
 
     sheetSubmit.disabled = true;
     sheetSubmit.textContent = editingId ? 'Saving...' : 'Adding...';
@@ -1104,7 +1110,12 @@
     sheetSubmit.textContent = editingId ? 'Save changes' : 'Add item';
   };
 
+  const pendingActions = new Set();
+
   window.toggleItem = async (id, current, el) => {
+    const key = 'toggle:' + id;
+    if (pendingActions.has(key)) return;
+    pendingActions.add(key);
     const nowBought = current !== 'bought';
     if (el) { el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 350); }
     try {
@@ -1120,8 +1131,12 @@
     } catch (e) {
       toast('Could not update item — check your connection and try again.');
     }
+    pendingActions.delete(key);
   };
   window.claimItem = async (id, current) => {
+    const key = 'claim:' + id;
+    if (pendingActions.has(key)) return;
+    pendingActions.add(key);
     const uid = auth.currentUser.uid;
     const newClaim = current === uid ? null : uid;
     try {
@@ -1132,6 +1147,7 @@
     } catch (e) {
       toast('Could not update claim — check your connection and try again.');
     }
+    pendingActions.delete(key);
   };
   window.deleteItem = async (id) => {
     const name = (window.itemsById[id] || {}).name || 'this item';
