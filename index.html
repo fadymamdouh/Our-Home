@@ -233,6 +233,35 @@
     margin-bottom:20px;
     border-bottom:1px solid var(--line);
   }
+  .sr-only{
+    position:absolute;
+    width:1px; height:1px;
+    padding:0; margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .search-row{
+    position:relative;
+    margin-bottom:16px;
+  }
+  .search-row input{
+    margin-bottom:0;
+    padding-right:38px;
+  }
+  #search-clear{
+    position:absolute;
+    right:6px; top:50%;
+    transform:translateY(-50%);
+    background:none;
+    color:var(--muted);
+    font-size:18px;
+    line-height:1;
+    padding:8px;
+    border-radius:50%;
+  }
+  #search-clear:hover{color:var(--accent);}
   .filter-group{
     display:flex;
     align-items:center;
@@ -746,6 +775,11 @@
       </div>
 
       <div id="filters">
+        <div class="search-row">
+          <label class="sr-only" for="search-input">Search your list</label>
+          <input type="text" id="search-input" placeholder="Search your list..." autocomplete="off">
+          <button id="search-clear" aria-label="Clear search" style="display:none;">×</button>
+        </div>
         <div class="filter-group">
           <span class="filter-label">Category</span>
           <div class="filter-row" id="filter-category"></div>
@@ -903,6 +937,7 @@
 
   // ---- Filters (client-side only, operate on the already-loaded item set) ----
   const filterState = { category: 'all', status: 'all', priority: 'all' };
+  let searchState = '';
   let lastItems = [];
   const filterCategoryRow = document.getElementById('filter-category');
   let categoryChipsHtml = '<button class="filter-chip active" data-filter="category" data-value="all">All</button>';
@@ -946,6 +981,35 @@
     filterState.status = 'all';
     filterState.priority = 'all';
     setFilterChipState();
+    render(lastItems);
+  };
+
+  // ---- Search (client-side only, combines with the filters above) ----
+  const searchInput = document.getElementById('search-input');
+  const searchClearBtn = document.getElementById('search-clear');
+
+  function setSearchUIState() {
+    searchClearBtn.style.display = searchState ? 'inline-flex' : 'none';
+  }
+
+  searchInput.addEventListener('input', () => {
+    searchState = searchInput.value.trim().toLowerCase();
+    setSearchUIState();
+    render(lastItems);
+  });
+
+  searchClearBtn.onclick = () => {
+    searchState = '';
+    searchInput.value = '';
+    setSearchUIState();
+    searchInput.focus();
+    render(lastItems);
+  };
+
+  window.clearSearch = () => {
+    searchState = '';
+    searchInput.value = '';
+    setSearchUIState();
     render(lastItems);
   };
 
@@ -1477,15 +1541,35 @@
       return;
     }
 
-    const filteredItems = items.filter(it => {
+    const searchedItems = !searchState ? items : items.filter(it => {
+      const name = (it.name || '').toLowerCase();
+      const notes = (it.notes || '').toLowerCase();
+      const label = (CATEGORY_LABELS[it.categoryId] || '').toLowerCase();
+      return name.includes(searchState) || notes.includes(searchState) || label.includes(searchState);
+    });
+
+    const filteredItems = searchedItems.filter(it => {
       if (filterState.category !== 'all' && (it.categoryId || 'other') !== filterState.category) return false;
       if (filterState.status !== 'all' && it.status !== filterState.status) return false;
       if (filterState.priority !== 'all' && it.priority !== filterState.priority) return false;
       return true;
     });
 
+    const filtersActive = filterState.category !== 'all' || filterState.status !== 'all' || filterState.priority !== 'all';
+
     if (filteredItems.length === 0) {
-      container.innerHTML = '<div class="empty">Nothing matches these filters.<br><button class="dash-link" style="display:inline-block; margin-top:10px;" onclick="clearFilters()">Clear filters</button></div>';
+      let msg, actions;
+      if (searchState && filtersActive) {
+        msg = 'Nothing matches your search and filters.';
+        actions = '<button class="dash-link" onclick="clearSearch()">Clear search</button> <button class="dash-link" onclick="clearFilters()">Clear filters</button>';
+      } else if (searchState) {
+        msg = 'Nothing matches your search.';
+        actions = '<button class="dash-link" onclick="clearSearch()">Clear search</button>';
+      } else {
+        msg = 'Nothing matches these filters.';
+        actions = '<button class="dash-link" onclick="clearFilters()">Clear filters</button>';
+      }
+      container.innerHTML = `<div class="empty">${msg}<br><div style="margin-top:10px; display:flex; gap:10px; justify-content:center;">${actions}</div></div>`;
       totalsEl.textContent = '';
       return;
     }
