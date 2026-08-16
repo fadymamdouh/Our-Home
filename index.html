@@ -226,7 +226,7 @@
     margin:-8px 0;
   }
   .dash-link:hover{text-decoration:underline;}
-  .dash-links{display:flex; justify-content:space-between;}
+  .dash-links{display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px 16px;}
 
   #filters{
     padding-bottom:20px;
@@ -532,6 +532,45 @@
   .lightbox img{max-width:90%; max-height:90%; border-radius:10px;}
 
   .category{margin-bottom:32px;}
+
+  .shop-item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 4px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .shop-item:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
+  .shop-item .thumb{margin:0;}
+  .shop-item-name{
+    flex:1;
+    min-width:0;
+    font-size:17px;
+    overflow-wrap:break-word;
+    word-break:break-word;
+  }
+  .shop-item-name .claim{
+    display:block;
+    font-size:11px;
+    margin-top:2px;
+  }
+  .shop-item .price{
+    font-family:'Karla','Helvetica Neue',Arial,sans-serif;
+    font-size:15px;
+    color:var(--ink);
+    flex:0 0 auto;
+    font-weight:600;
+  }
+  .shop-item-bought{
+    padding:12px 4px;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+    color:var(--muted);
+    text-decoration:line-through;
+    cursor:pointer;
+  }
+  .shop-item-bought:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
   .category h2{
     font-family:'Cormorant Garamond',serif;
     font-style:italic;
@@ -700,6 +739,15 @@
     text-align:center;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast-action{
+    pointer-events:auto;
+    background:none;
+    color:#fff;
+    text-decoration:underline;
+    font-weight:600;
+    margin-left:10px;
+    padding:2px 4px;
+  }
 
   .empty{
     text-align:center;
@@ -771,6 +819,7 @@
         <div class="dash-links">
           <button class="dash-link" id="dash-see-all">See everything ↓</button>
           <button class="dash-link" id="dash-recent">Recent changes →</button>
+          <button class="dash-link" id="dash-shopping">Shopping mode →</button>
         </div>
       </div>
 
@@ -839,6 +888,13 @@
 
       <button class="btn-primary" id="settings-signout" style="margin-top:20px;">Sign out</button>
     </div>
+
+    <div id="shopping-view" class="sub-view">
+      <button class="back-link" id="shopping-back">← Back</button>
+      <h2 class="view-title">Shopping mode</h2>
+      <p class="dash-line" id="shopping-subline">—</p>
+      <div id="shopping-list"></div>
+    </div>
   </main>
 </div>
 
@@ -886,7 +942,10 @@
   <img id="lightbox-img" src="" alt="Item photo, enlarged">
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">
+  <span id="toast-msg"></span>
+  <button id="toast-action-btn" class="toast-action" style="display:none;"></button>
+</div>
 
 <!-- Firebase SDKs -->
 <script type="module">
@@ -1017,12 +1076,35 @@
   let householdCurrency = "";
   let householdBudget = null;
 
-  function toast(msg) {
+  function toast(msg, action) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
+    const msgEl = document.getElementById('toast-msg');
+    const actionBtn = document.getElementById('toast-action-btn');
+    msgEl.textContent = msg;
     el.classList.add('show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.remove('show'), 3000);
+
+    actionBtn.onclick = null;
+    if (action && action.label && action.onClick) {
+      actionBtn.textContent = action.label;
+      actionBtn.style.display = 'inline';
+      actionBtn.onclick = () => {
+        actionBtn.onclick = null;
+        actionBtn.style.display = 'none';
+        clearTimeout(toast._t);
+        el.classList.remove('show');
+        action.onClick();
+      };
+    } else {
+      actionBtn.style.display = 'none';
+    }
+
+    const duration = action ? 4000 : 3000;
+    toast._t = setTimeout(() => {
+      el.classList.remove('show');
+      actionBtn.onclick = null;
+      actionBtn.style.display = 'none';
+    }, duration);
   }
 
   // ---- Auth UI (sign-in only — accounts are created in the Firebase Console) ----
@@ -1314,7 +1396,20 @@
       });
       const itemName = (window.itemsById[id] || {}).name || 'item';
       logActivity(nowBought ? 'purchased' : 'unpurchased', itemName);
-      toast(nowBought ? 'Marked as bought' : 'Marked as still needed');
+      const isShoppingModeBuy = nowBought && el && el.classList.contains('shop-item');
+      if (isShoppingModeBuy) {
+        toast('Marked as bought', {
+          label: 'Undo',
+          onClick: () => {
+            const liveItem = window.itemsById[id];
+            if (!liveItem) { toast("That item's gone — nothing to undo."); return; }
+            if (liveItem.status !== 'bought') { toast('Already changed — nothing to undo.'); return; }
+            toggleItem(id, 'bought');
+          }
+        });
+      } else {
+        toast(nowBought ? 'Marked as bought' : 'Marked as still needed');
+      }
     } catch (e) {
       toast('Could not update item — check your connection and try again.');
     }
@@ -1402,19 +1497,68 @@
     }
   }
 
+  function renderShoppingMode(items) {
+    const neededItems = items.filter(it => it.status === 'needed');
+    const boughtItems = items.filter(it => it.status === 'bought');
+    const sublineEl = document.getElementById('shopping-subline');
+    const listEl = document.getElementById('shopping-list');
+    if (!sublineEl || !listEl) return;
+
+    const currency = householdCurrency || '';
+    const total = neededItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
+
+    if (neededItems.length === 0) {
+      sublineEl.textContent = '';
+      listEl.innerHTML = '<div class="empty">Nothing left to get — you\'re all set.</div>';
+      return;
+    }
+
+    sublineEl.textContent = `${neededItems.length} thing${neededItems.length === 1 ? '' : 's'} left · ~${total.toFixed(2)} ${currency} to go`;
+
+    const byCategory = groupByCategory(neededItems);
+    const boughtByCategory = groupByCategory(boughtItems);
+    let html = '';
+    for (const catId of Object.keys(byCategory)) {
+      const list = byCategory[catId];
+      const label = CATEGORY_LABELS[catId] || CATEGORY_LABELS.other;
+      html += `<div class="category"><h2>${label} <span class="count">${list.length}</span></h2>`;
+      list.forEach(it => {
+        const claimedByName = it.claimedBy ? (members[it.claimedBy] || 'Someone') : null;
+        const isClaimedByMe = it.claimedBy === auth.currentUser.uid;
+        html += `
+          <div class="shop-item" role="button" tabindex="0" aria-label="Mark ${escapeHtml(it.name)} as bought" onclick="toggleItem('${it.id}','${it.status}', this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleItem('${it.id}','${it.status}', this)}">
+            ${it.photoURL ? `<img class="thumb" src="${it.photoURL}" alt="${escapeHtml(it.name)}" onclick="event.stopPropagation();openLightbox('${it.photoURL}')">` : ''}
+            <div class="shop-item-name">
+              ${escapeHtml(it.name)} ${safeHref(it.link) ? `<a class="link utility" href="${escapeHtml(safeHref(it.link))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>` : ''}
+              ${it.claimedBy ? `<span class="claim ${isClaimedByMe ? 'claim-mine' : 'claim-other'}">${isClaimedByMe ? "You're getting this" : escapeHtml(claimedByName) + ' is getting this'}</span>` : ''}
+            </div>
+            ${it.price ? `<div class="price">${((it.price || 0) * (it.quantity || 1)).toFixed(2)} ${escapeHtml(currency)}</div>` : ''}
+          </div>`;
+      });
+      const boughtInCat = boughtByCategory[catId] || [];
+      boughtInCat.forEach(it => {
+        html += `<div class="shop-item-bought" role="button" tabindex="0" aria-label="Mark ${escapeHtml(it.name)} as still needed" onclick="toggleItem('${it.id}','${it.status}', this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleItem('${it.id}','${it.status}', this)}">${escapeHtml(it.name)}</div>`;
+      });
+      html += `</div>`;
+    }
+    listEl.innerHTML = html;
+  }
+
   document.getElementById('dash-see-all').onclick = () => {
     document.getElementById('list-container').scrollIntoView({ behavior: 'smooth' });
   };
 
-  // ---- View switching (main / recent / settings) ----
+  // ---- View switching (main / recent / settings / shopping) ----
   function showView(id) {
     document.getElementById('main-view').classList.remove('open');
     document.getElementById('recent-view').classList.remove('open');
     document.getElementById('settings-view').classList.remove('open');
+    document.getElementById('shopping-view').classList.remove('open');
     if (id === 'main') {
       document.getElementById('main-view').style.display = 'block';
       document.getElementById('recent-view').classList.remove('open');
       document.getElementById('settings-view').classList.remove('open');
+      document.getElementById('shopping-view').classList.remove('open');
     } else {
       document.getElementById('main-view').style.display = 'none';
       document.getElementById(id).classList.add('open');
@@ -1432,6 +1576,10 @@
     showView('settings-view');
   };
   document.getElementById('settings-back').onclick = () => showView('main');
+  document.getElementById('dash-shopping').onclick = () => {
+    showView('shopping-view');
+  };
+  document.getElementById('shopping-back').onclick = () => showView('main');
 
   function dayLabel(date) {
     const now = new Date();
@@ -1529,10 +1677,20 @@
 
   window.itemsById = {};
 
+  function groupByCategory(items) {
+    const byCategory = {};
+    items.forEach(it => {
+      const cat = it.categoryId || 'other';
+      (byCategory[cat] = byCategory[cat] || []).push(it);
+    });
+    return byCategory;
+  }
+
   function render(items) {
     window.itemsById = {};
     items.forEach(it => { window.itemsById[it.id] = it; });
     renderDashboard(items);
+    renderShoppingMode(items);
     const container = document.getElementById('list-container');
     const totalsEl = document.getElementById('totals');
     if (items.length === 0) {
@@ -1574,11 +1732,7 @@
       return;
     }
 
-    const byCategory = {};
-    filteredItems.forEach(it => {
-      const cat = it.categoryId || 'other';
-      (byCategory[cat] = byCategory[cat] || []).push(it);
-    });
+    const byCategory = groupByCategory(filteredItems);
 
     const myUid = auth.currentUser.uid;
     const currency = householdCurrency || '';
