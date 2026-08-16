@@ -816,6 +816,7 @@
         <p class="dash-line" id="dash-counts">—</p>
         <div class="dash-bar"><div class="dash-bar-fill" id="dash-bar-fill"></div></div>
         <p class="dash-budget" id="dash-budget">—</p>
+        <p class="dash-budget" id="dash-still-to-spend" style="display:none;"></p>
         <div class="dash-links">
           <button class="dash-link" id="dash-see-all">See everything ↓</button>
           <button class="dash-link" id="dash-recent">Recent changes →</button>
@@ -1470,27 +1471,51 @@
     return ts.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function calculateTotals(items) {
+    let neededTotal = 0, boughtTotal = 0, neededCount = 0, boughtCount = 0;
+    items.forEach(it => {
+      const lineTotal = (it.price || 0) * (it.quantity || 1);
+      if (it.status === 'bought') {
+        boughtTotal += lineTotal;
+        boughtCount++;
+      } else {
+        neededTotal += lineTotal;
+        neededCount++;
+      }
+    });
+    return { itemCount: items.length, neededCount, boughtCount, neededTotal, boughtTotal };
+  }
+
   function renderDashboard(items) {
-    const total = items.length;
-    const bought = items.filter(it => it.status === 'bought').length;
+    const totals = calculateTotals(items);
+    const total = totals.itemCount;
+    const bought = totals.boughtCount;
     document.getElementById('dash-counts').textContent =
       total === 0 ? "Nothing planned yet" : `${total} thing${total === 1 ? '' : 's'} planned · ${bought} already bought`;
 
     const currency = householdCurrency || '';
-    const purchasedAmount = items.reduce((sum, it) => {
-      if (it.status !== 'bought') return sum;
-      return sum + (it.price || 0) * (it.quantity || 1);
-    }, 0);
+    const purchasedAmount = totals.boughtTotal;
+
+    const stillToSpendEl = document.getElementById('dash-still-to-spend');
+    if (totals.neededTotal > 0) {
+      stillToSpendEl.textContent = `~${totals.neededTotal.toFixed(2)} ${currency} still to spend on what's left`;
+      stillToSpendEl.style.display = 'block';
+    } else {
+      stillToSpendEl.style.display = 'none';
+    }
 
     const budgetEl = document.getElementById('dash-budget');
     const fillEl = document.getElementById('dash-bar-fill');
 
-    if (householdBudget && householdBudget > 0) {
+    if (typeof householdBudget === 'number' && householdBudget > 0) {
       const remaining = householdBudget - purchasedAmount;
       const pct = Math.min(100, (purchasedAmount / householdBudget) * 100);
       fillEl.style.width = pct + '%';
       budgetEl.textContent =
         `${purchasedAmount.toFixed(2)} ${currency} spent · ${remaining.toFixed(2)} ${currency} remaining of ${householdBudget.toFixed(2)} ${currency}`;
+    } else if (typeof householdBudget === 'number' && householdBudget === 0) {
+      fillEl.style.width = '0%';
+      budgetEl.textContent = `${purchasedAmount.toFixed(2)} ${currency} spent so far — budget is set to 0 ${currency}`;
     } else {
       fillEl.style.width = total === 0 ? '0%' : `${Math.min(100, (bought / total) * 100)}%`;
       budgetEl.innerHTML = `${purchasedAmount.toFixed(2)} ${currency} spent so far — set a budget in Firestore to track it here`;
@@ -1505,7 +1530,7 @@
     if (!sublineEl || !listEl) return;
 
     const currency = householdCurrency || '';
-    const total = neededItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
+    const total = calculateTotals(items).neededTotal;
 
     if (neededItems.length === 0) {
       sublineEl.textContent = '';
@@ -1733,12 +1758,14 @@
     }
 
     const byCategory = groupByCategory(filteredItems);
+    const listTotals = calculateTotals(filteredItems);
+    const totalAll = listTotals.neededTotal + listTotals.boughtTotal;
+    const totalBought = listTotals.boughtTotal;
 
     const myUid = auth.currentUser.uid;
     const currency = householdCurrency || '';
 
     let html = '';
-    let totalAll = 0, totalBought = 0;
     for (const catId of Object.keys(byCategory)) {
       const list = byCategory[catId];
       const label = CATEGORY_LABELS[catId] || CATEGORY_LABELS.other;
@@ -1746,8 +1773,6 @@
       list.forEach(it => {
         const qty = it.quantity || 1;
         const lineTotal = (it.price || 0) * qty;
-        totalAll += lineTotal;
-        if (it.status === 'bought') totalBought += lineTotal;
         const isMust = (it.priority || 'must') === 'must';
         const addedByName = members[it.addedBy] || 'Someone';
         const claimedByName = it.claimedBy ? (members[it.claimedBy] || 'Someone') : null;
