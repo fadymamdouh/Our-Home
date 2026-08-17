@@ -1664,7 +1664,7 @@
     document.getElementById('settings-name').textContent = 'Fazafizo & Batoot';
     document.getElementById('settings-currency').textContent = householdCurrency || '—';
     document.getElementById('settings-budget').textContent =
-      householdBudget ? `${householdBudget.toFixed(2)} ${householdCurrency}` : 'Not set';
+      typeof householdBudget === 'number' ? `${householdBudget.toFixed(2)} ${householdCurrency}` : 'Not set';
     document.getElementById('settings-user').textContent =
       `${members[auth.currentUser.uid] || 'You'} (${auth.currentUser.email})`;
   }
